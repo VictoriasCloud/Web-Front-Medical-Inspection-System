@@ -14,21 +14,35 @@
             <div class="container-fluid">
                 <ion-icon name="skull-outline" class="ms-2 me-2" style="color: white; transform: scale(2);"></ion-icon>
 
-                <div class="navbar-header">
+                <div class="navbar-header me-4">
                     <div class="row text-end">
                         <div class="mt-1" style="color: white">Try not to</div>
                         <div class="mb-1" style="color: white; font-weight: bold;">Die</div>
                     </div>
                 </div>
 
-                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <div class="collapse navbar-collapse">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="nav-link text-white me-4" href="/patients.html">Пациенты</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white me-4" href="/consultations.html">Консультации</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white me-4" href="/reports.html">Отчеты и статистика</a>
+                        </li>
                     </ul>
-                    <div id="info">
-                        <a href="/login.html" class="btn btn-primary">Вход</a>
+                    <div id="user-info" class="dropdown">
+                        <button class="btn btn-primary dropdown-toggle" type="button" id="userDropdown"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            Вход
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="/profile.html">Профиль</a></li>
+                            <li><a class="dropdown-item" id="logout">Выход</a></li>
+                        </ul>
                     </div>
-                    
-
                 </div>
             </div>
         </nav>
@@ -36,8 +50,8 @@
 
     <section class="d-flex flex-column justify-content-center align-items-center min-vh-100 p-4">
         <div class="col-md-6 col-lg-4">
-            <form  id="registerForm" class="shadow p-4 rounded bg-light">
-                <h1 class="mb-4">Регистрация</h1>
+            <form id="profileForm" class="shadow p-4 rounded bg-light">
+                <h1 class="mb-4">Профиль</h1>
 
                 <div class="mb-3">
                     <label for="fullName" class="form-label">Имя</label>
@@ -50,8 +64,8 @@
                         <label for="gender" class="form-label">Пол</label>
                         <select class="form-select" id="gender" required>
                             <option value="">Выберите пол</option>
-                            <option value="male">Мужской</option>
-                            <option value="female">Женский</option>
+                            <option value="Male">Мужской</option>
+                            <option value="Female">Женский</option>
                         </select>
                     </div>
                     <div class="col-md-6 mb-3">
@@ -66,23 +80,12 @@
                 </div>
 
                 <div class="mb-3">
-                    <label for="specialty" class="form-label">Специальность</label>
-                    <select class="form-select" id="specialty" required>
-                        <option value="">Выберите специальность</option>
-                    </select>
-                </div>
-
-                <div class="mb-3">
                     <label for="email" class="form-label">Email</label>
                     <input type="email" class="form-control" id="email" placeholder="name@example.com" required>
                 </div>
 
-                <div class="mb-3">
-                    <label for="password" class="form-label">Пароль</label>
-                    <input type="password" class="form-control" id="password" required>
-                </div>
 
-                <button type="submit" class="btn btn-primary w-100">Зарегистрироваться</button>
+                <button type="submit" class="btn btn-primary w-100">Сохранить Изменения</button>
             </form>
         </div>
     </section>
@@ -92,27 +95,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
         crossorigin="anonymous"></script>
-    <script>
-        async function loadSpecialties() {
-            const response = await fetch('https://mis-api.kreosoft.space/api/dictionary/speciality?page=1&size=20', {
-                headers: { 'accept': 'text/plain' }
-            });
-            const data = await response.json();
-            const specialtySelect = document.getElementById('specialty');
 
-            data.specialties.forEach(specialty => {
-                const option = document.createElement('option');
-                option.value = specialty.id;
-                option.textContent = specialty.name;
-                specialtySelect.appendChild(option);
-            });
-        }
-
-        // Вызов функции загрузки специальностей при загрузке страницы
-        document.addEventListener('DOMContentLoaded', loadSpecialties);
-    </script>
-    <script src="js/registration.js"></script>
-
+    <script src="js/profile.js"></script>
 </body>
-
 </html>
