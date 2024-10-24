@@ -1,5 +1,13 @@
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('loginForm');
+
+    const registerButton = document.getElementById('registr'); // Кнопка регистрации
+
+    if (registerButton) {
+        registerButton.addEventListener('click', function () {
+            window.location.href = '/registration.html'; // Перенаправляем на страницу регистрации
+        });
+    }
     
     if (form) {
         form.addEventListener('submit', async function (event) {
