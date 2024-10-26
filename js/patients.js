@@ -7,10 +7,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Функция для загрузки пациентов с поддержкой фильтров и пагинации
     function loadPatients(page = 1) {
-        // Получаем значение кол-ва п-ов на странице из поля ввода
         const pageSize = document.getElementById('pageSize').value || 5;
         const sortBy = sortBySelect.value || ''; // Получаем выбранную сортировку
-
+    
+        console.log('Текущая страница:', page);
+        console.log('Количество пациентов на странице:', pageSize);
+    
         const params = new URLSearchParams({
             page: page,
             size: pageSize,
@@ -20,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function () {
             onlyMine: document.getElementById('myPatients').checked,
             sorting: sortBy
         });
-
+    
         fetch(`${apiBaseUrl}/api/patient?${params.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`,
@@ -34,11 +36,13 @@ document.addEventListener('DOMContentLoaded', function () {
             return response.json();
         })
         .then(data => {
+            console.log('Ответ с сервера:', data); // Для проверки всех данных
             displayPatients(data.patients);
             setupPagination(data.pagination);
         })
         .catch(error => console.error('Ошибка загрузки пациентов:', error));
     }
+    
 
     // Отображение списка пациентов
     function displayPatients(patients) {
@@ -58,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const gender = patient.gender || 'Не указано';
 
             col.innerHTML = `
-                <div class="card h-100">
+                <div class="card h-100 bg-light">
                     <div class="card-body">
                         <h5 class="card-title">${name}</h5>
                         <p class="card-text">Дата рождения: ${birthday}</p>
@@ -76,7 +80,11 @@ document.addEventListener('DOMContentLoaded', function () {
     function setupPagination(pagination) {
         const paginationElement = document.getElementById('pagination');
         paginationElement.innerHTML = '';
-        for (let i = 1; i <= Math.ceil(pagination.count / pagination.size); i++) {
+    
+        const totalPages = pagination.count;  // Используем количество страниц с сервера
+        console.log('Количество страниц:', totalPages); // Проверка количества страниц
+    
+        for (let i = 1; i <= totalPages; i++) {
             const pageItem = document.createElement('li');
             pageItem.className = 'page-item';
             pageItem.innerHTML = `<a class="page-link" href="#">${i}</a>`;
@@ -87,6 +95,7 @@ document.addEventListener('DOMContentLoaded', function () {
             paginationElement.appendChild(pageItem);
         }
     }
+    
 
     // Обработчик поиска пациентов
     searchBtn.addEventListener('click', () => loadPatients());
