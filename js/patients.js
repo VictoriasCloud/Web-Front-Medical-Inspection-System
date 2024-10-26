@@ -1,41 +1,65 @@
 document.addEventListener('DOMContentLoaded', function () {
     const searchBtn = document.getElementById('searchPatients');
-    const registerBtn = document.getElementById('registerPatientBtn');
     const sortBySelect = document.getElementById('sortBy');
+    const pageSizeInput = document.getElementById('pageSize');
     const authToken = localStorage.getItem('authToken');
     const apiBaseUrl = 'https://mis-api.kreosoft.space'; 
     const userDropdown = document.getElementById('userDropdown');
-    const storedUserName = localStorage.getItem('userName'); // Получаем имя пользователя из localStorage
+    const storedUserName = localStorage.getItem('userName');
 
-    // Обновляем кнопку в навбаре, если в localStorage есть токен и имя пользователя
+    // Обновление кнопку в навбаре
     if (authToken && storedUserName) {
         updateUserDropdown(storedUserName);
     }
 
-    // Функция для обновления текста кнопки с именем пользователя
     function updateUserDropdown(userName) {
         userDropdown.textContent = userName.length > 20 ? userName.slice(0, 20) + '...' : userName;
     }
 
-    // Функция для загрузки пациентов с поддержкой фильтров и пагинации
-    function loadPatients(page = 1) {
-        const pageSize = document.getElementById('pageSize').value || 5;
-        const sortBy = sortBySelect.value || ''; // Получаем выбранную сортировку
-    
-        console.log('Текущая страница:', page);
-        console.log('Количество пациентов на странице:', pageSize);
-    
-        const params = new URLSearchParams({
-            page: page,
-            size: pageSize,
-            name: document.getElementById('searchName').value,
-            conclusions: document.getElementById('conclusions').value,
-            scheduledVisits: document.getElementById('scheduledVisits').checked,
-            onlyMine: document.getElementById('myPatients').checked,
-            sorting: sortBy
+    // Получение параметров из URL
+    function getQueryParam(param, defaultValue) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.has(param) ? urlParams.get(param) : defaultValue;
+    }
+
+    // Обновление URL без перезагрузки страницы
+    function updateURL(params) {
+        const urlParams = new URLSearchParams(params);
+        window.history.pushState(null, '', `${window.location.pathname}?${urlParams.toString()}`);
+    }
+
+    // Чистка параметров (удаление пустых)
+    function cleanParams(params) {
+        Object.keys(params).forEach(key => {
+            if (params[key] === '' || params[key] === undefined || params[key] === null) {
+                delete params[key];
+            }
         });
-    
-        fetch(`${apiBaseUrl}/api/patient?${params.toString()}`, {
+        return params;
+    }
+
+    // Загрузка пациентов с поддержкой фильтров и пагинации
+    function loadPatients(page = 1) {
+        const pageSize = pageSizeInput.value || 5;
+        const sortBy = sortBySelect.value || '';
+        const name = document.getElementById('searchName').value;
+        const conclusions = document.getElementById('conclusions').value;
+        const scheduledVisits = document.getElementById('scheduledVisits').checked;
+        const onlyMine = document.getElementById('myPatients').checked;
+
+        const params = cleanParams({
+            page,
+            size: pageSize,
+            name,
+            conclusions,
+            sorting: sortBy,
+            scheduledVisits: scheduledVisits ? 'true' : '',
+            onlyMine: onlyMine ? 'true' : ''
+        });
+
+        updateURL(params);  // Обновляем URL без перезагрузки страницы
+
+        fetch(`${apiBaseUrl}/api/patient?${new URLSearchParams(params).toString()}`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`,
                 'Accept': 'application/json'
@@ -48,14 +72,11 @@ document.addEventListener('DOMContentLoaded', function () {
             return response.json();
         })
         .then(data => {
-            console.log('Ответ с сервера:', data); // Для проверки всех данных
             displayPatients(data.patients);
             setupPagination(data.pagination);
         })
         .catch(error => console.error('Ошибка загрузки пациентов:', error));
     }
-    loadPatients();
-    
 
     // Отображение списка пациентов
     function displayPatients(patients) {
@@ -63,19 +84,18 @@ document.addEventListener('DOMContentLoaded', function () {
         patientsList.innerHTML = '';
 
         const row = document.createElement('div');
-        row.className = 'row'; // Строка Bootstrap
+        row.className = 'row';
 
         patients.forEach(patient => {
             const col = document.createElement('div');
-            col.className = 'col-md-6 mb-4'; // Колонка для двух элементов на экранах md и выше
+            col.className = 'col-md-6 mb-4';
 
-            // Проверяем значения, если null, то выводим текст 'Не указано'
             const name = patient.name || 'Не указано';
             const birthday = patient.birthday ? patient.birthday.split('T')[0] : 'Не указано';
             const gender = patient.gender || 'Не указано';
 
             col.innerHTML = `
-                <div class="card h-100 bg-light">
+                <div class="card h-100 bg-light patient-card" data-patient-id="${patient.id}">
                     <div class="card-body">
                         <h5 class="card-title">${name}</h5>
                         <p class="card-text">Дата рождения: ${birthday}</p>
@@ -87,35 +107,47 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         patientsList.appendChild(row);
+
+        const patientCards = document.querySelectorAll('.patient-card');
+        patientCards.forEach(card => {
+            card.addEventListener('click', function () {
+                const patientId = this.getAttribute('data-patient-id');
+                window.location.href = `/card.html?id=${patientId}`;
+            });
+        });
     }
 
     // Установка пагинации
     function setupPagination(pagination) {
         const paginationElement = document.getElementById('pagination');
         paginationElement.innerHTML = '';
-    
-        const totalPages = pagination.count;  // Используем количество страниц с сервера
-        console.log('Количество страниц:', totalPages); // Проверка количества страниц
-    
+
+        const totalPages = pagination.count;
+        const currentPage = pagination.current;
+
+        // Создаем кнопки пагинации
         for (let i = 1; i <= totalPages; i++) {
             const pageItem = document.createElement('li');
-            pageItem.className = 'page-item';
+            pageItem.className = `page-item ${i === currentPage ? 'active' : ''}`;
             pageItem.innerHTML = `<a class="page-link" href="#">${i}</a>`;
             pageItem.addEventListener('click', function (event) {
                 event.preventDefault();
-                loadPatients(i); // Загружаем нужную страницу
+                loadPatients(i);  // Загружаем нужную страницу без перезагрузки
             });
             paginationElement.appendChild(pageItem);
         }
     }
-    
 
     // Обработчик поиска пациентов
     searchBtn.addEventListener('click', () => loadPatients());
-    // Обработчик для изменения сортировки
+
+    // Обработчик изменения сортировки
     sortBySelect.addEventListener('change', () => loadPatients());
 
-    // Открытие модального окна для регистрации нового пациента
+    // Загружаем пациентов при загрузке страницы
+    loadPatients(parseInt(getQueryParam('page', 1)));
+
+    // Обработчик для кнопки регистрации пациента
     registerBtn.addEventListener('click', () => {
         const modal = new bootstrap.Modal(document.getElementById('patientModal'));
         modal.show();
@@ -135,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function () {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(patientData)
         })
@@ -145,16 +177,13 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             return response.json();
         })
-        .then(data => {
+        .then(() => {
             alert('Пациент успешно зарегистрирован');
-            loadPatients(); // Перезагрузка списка пациентов
+            loadPatients();  // Обновляем список пациентов
         })
         .catch(error => {
             console.error('Ошибка при регистрации пациента:', error);
             alert('Ошибка при регистрации пациента');
         });
     });
-
-    // Загружаем пациентов при загрузке страницы
-    loadPatients();
 });

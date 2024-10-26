@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карта пациента</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Навбар -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <ion-icon name="skull-outline" style="color: white; transform: scale(2);"></ion-icon>
+                Try not to DIE
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/patients.html">Пациенты</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/consultations.html">Консультации</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/reports.html">Отчеты и статистика</a>
+                    </li>
+                </ul>
+                <div class="dropdown">
+                    <button class="btn btn-primary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        Иванов Иван Иванович
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <li><a class="dropdown-item" href="/profile.html">Профиль</a></li>
+                        <li><a class="dropdown-item" href="/logout.html">Выход</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Основная информация о пациенте -->
+    <div class="container mt-5">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Медицинская карта пациента</h2>
+            <button class="btn btn-primary mb-3" id="addInspectionBtn">Добавить осмотр</button>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 id="patientName">Имя</h4>
+            <p id="patientDob">Дата рождения: ...</p>
+        </div>
+
+        <div class="card p-4 bg-light rounded">
+            <form class="row g-3 align-items-center">
+                <div class="col-md-6">
+                    <label for="icd10" class="form-label">МКБ-10</label>
+                    <input type="text" id="icd10" class="form-control" placeholder="Введите диагноз или код">
+                </div>
+                <div class="col-md-6">
+                    <label for="pageSize" class="form-label">Число осмотров на странице</label>
+                    <input id="pageSize" type="number" class="form-control" value="5" min="1" max="100" step="1">
+                </div>
+        
+                <div class="col-md-3 d-flex align-items-center">
+                    <input class="form-check-input me-2" type="checkbox" id="groupByRepeat">
+                    <label class="form-check-label" for="groupByRepeat">
+                        Сгруппировать по повторным
+                    </label>               
+                </div>
+        
+                <div class="col-md-3 d-flex align-items-center">
+                    <input class="form-check-input me-2" type="checkbox" id="showAll">
+                    <label class="form-check-label" for="showAll">
+                        Показать все
+                    </label>
+                </div>
+        
+                <div class="col-md-6 d-flex justify-content-end">
+                    <button class="btn btn-primary" id="filterBtn">Поиск</button>
+                </div>
+            </form>
+        </div>
+        
+
+        <!-- Список осмотров -->
+        <div class="mt-4" id="inspectionsList">
+            <!-- Сюда будут добавляться осмотры через JavaScript -->
+        </div>
+
+        <!-- Пагинация -->
+        <nav aria-label="Inspections pagination">
+            <ul class="pagination justify-content-center" id="pagination">
+                <!-- Сюда будут добавляться элементы пагинации -->
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Подключаем JS файл -->
+    <script src="js/card.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
