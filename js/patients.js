@@ -3,18 +3,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const sortBySelect = document.getElementById('sortBy');
     const pageSizeInput = document.getElementById('pageSize');
     const authToken = localStorage.getItem('authToken');
-    const apiBaseUrl = 'https://mis-api.kreosoft.space'; 
-    const userDropdown = document.getElementById('userDropdown');
-    const storedUserName = localStorage.getItem('userName');
-
-    // Обновление кнопку в навбаре
-    if (authToken && storedUserName) {
-        updateUserDropdown(storedUserName);
-    }
-
-    function updateUserDropdown(userName) {
-        userDropdown.textContent = userName.length > 20 ? userName.slice(0, 20) + '...' : userName;
-    }
+    const apiBaseUrl = 'https://mis-api.kreosoft.space';
 
     // Получение параметров из URL
     function getQueryParam(param, defaultValue) {
@@ -146,12 +135,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Загружаем пациентов при загрузке страницы
     loadPatients(parseInt(getQueryParam('page', 1)));
-
-    // Обработчик для кнопки регистрации пациента
-    registerBtn.addEventListener('click', () => {
-        const modal = new bootstrap.Modal(document.getElementById('patientModal'));
-        modal.show();
-    });
 
     // Регистрация нового пациента
     document.getElementById('patientForm').addEventListener('submit', function (event) {
