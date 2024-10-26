@@ -2,7 +2,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const profileForm = document.getElementById('profileForm');
     const userDropdown = document.getElementById('userDropdown');
     const authToken = localStorage.getItem('authToken');
+    const storedUserName = localStorage.getItem('userName'); // Считываем имя из localStorage
 
+    // Обновляем кнопку в навбаре при загрузке, если имя уже есть в localStorage
+    if (storedUserName) {
+        updateUserDropdown(storedUserName);
+    }
+    
     // Загружаем данные профиля при загрузке страницы
     if (authToken) {
         fetch('https://mis-api.kreosoft.space/api/doctor/profile', {
@@ -21,12 +27,20 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('phone').value = data.phone;
             document.getElementById('email').value = data.email;
 
+            // Сохраняем имя пользователя в localStorage
+            localStorage.setItem('userName', data.name);
+
             // Обновляем кнопку пользователя в навбаре
-            userDropdown.textContent = data.name.length > 20 ? data.name.slice(0, 20) + '...' : data.name;
+            updateUserDropdown(data.name);
         })
         .catch(error => {
             console.error('Ошибка при загрузке профиля:', error);
         });
+    }
+    
+    // Функция для обновления текста кнопки в навбаре
+    function updateUserDropdown(userName) {
+        userDropdown.textContent = userName.length > 20 ? userName.slice(0, 20) + '...' : userName;
     }
 
     // Обработчик отправки формы профиля
@@ -63,6 +77,10 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(data => {
             alert('Профиль успешно обновлён.');
+            // Обновляем имя пользователя в localStorage и в кнопке
+            const updatedName = document.getElementById('fullName').value;
+            localStorage.setItem('userName', updatedName);
+            updateUserDropdown(updatedName);
         })
         .catch(error => {
             console.error('Ошибка при сохранении профиля:', error);
@@ -75,6 +93,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (logoutButton) {
         logoutButton.addEventListener('click', function () {
             localStorage.removeItem('authToken'); // Удаляем токен из LocalStorage
+            localStorage.removeItem('userName');  // Удаляем имя пользователя из LocalStorage
             window.location.href = 'login.html'; // Перенаправляем на страницу входа
         });
     }

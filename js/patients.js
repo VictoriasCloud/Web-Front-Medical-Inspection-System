@@ -4,6 +4,18 @@ document.addEventListener('DOMContentLoaded', function () {
     const sortBySelect = document.getElementById('sortBy');
     const authToken = localStorage.getItem('authToken');
     const apiBaseUrl = 'https://mis-api.kreosoft.space'; 
+    const userDropdown = document.getElementById('userDropdown');
+    const storedUserName = localStorage.getItem('userName'); // Получаем имя пользователя из localStorage
+
+    // Обновляем кнопку в навбаре, если в localStorage есть токен и имя пользователя
+    if (authToken && storedUserName) {
+        updateUserDropdown(storedUserName);
+    }
+
+    // Функция для обновления текста кнопки с именем пользователя
+    function updateUserDropdown(userName) {
+        userDropdown.textContent = userName.length > 20 ? userName.slice(0, 20) + '...' : userName;
+    }
 
     // Функция для загрузки пациентов с поддержкой фильтров и пагинации
     function loadPatients(page = 1) {
@@ -42,6 +54,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .catch(error => console.error('Ошибка загрузки пациентов:', error));
     }
+    loadPatients();
     
 
     // Отображение списка пациентов

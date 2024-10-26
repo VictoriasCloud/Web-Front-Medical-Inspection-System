@@ -10,24 +10,33 @@
 <body>
     <header>
         <nav class="navbar navbar-expand bg-primary shadow-sm">
+
             <div class="container-fluid">
                 <ion-icon name="skull-outline" class="ms-2 me-2" style="color: white; transform: scale(2);"></ion-icon>
-                <div class="navbar-header">
+
+                <div class="navbar-header me-4">
                     <div class="row text-end">
                         <div class="mt-1" style="color: white">Try not to</div>
                         <div class="mb-1" style="color: white; font-weight: bold;">Die</div>
                     </div>
                 </div>
+
                 <div class="collapse navbar-collapse">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        <li class="nav-item"><a class="nav-link text-white" href="/patients.html">Пациенты</a></li>
-                        <li class="nav-item"><a class="nav-link text-white" href="/consultations.html">Консультации</a></li>
-                        <li class="nav-item"><a class="nav-link text-white" href="/reports.html">Отчеты и статистика</a></li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white me-4" href="/patients.html">Пациенты</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white me-4" href="/consultations.html">Консультации</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white me-4" href="/reports.html">Отчеты и статистика</a>
+                        </li>
                     </ul>
                     <div id="user-info" class="dropdown">
                         <button class="btn btn-primary dropdown-toggle" type="button" id="userDropdown"
                             data-bs-toggle="dropdown" aria-expanded="false">
-                            Иванов Иван Иванович
+                            Вход
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             <li><a class="dropdown-item" href="/profile.html">Профиль</a></li>
@@ -44,64 +53,64 @@
             <h2>Пациенты</h2>
             <button type="button" class="btn btn-primary" id="registerPatientBtn">Регистрация нового пациента</button>
         </div>
-<div class="card p-4 bg-light rounded">
-    <h5 class="mb-3">Фильтры и сортировка</h5>
-    <form class="row g-3 align-items-center">
-        <!-- Первый ряд: Имя и Имеющиеся заключения -->
-        <div class="col-md-6">
-            <label for="searchName" class="form-label">Имя</label>
-            <input type="text" class="form-control" id="searchName" placeholder="Иванов Иван Иванович">
-        </div>
-        <div class="col-md-6">
-            <label for="conclusions" class="form-label">Имеющиеся заключения</label>
-            <select class="form-select" id="conclusions">
-                <option value="">Выберите заключение</option>
-                <option value="Recovery">Выздоровление</option>
-                <option value="Disease">Болезнь</option>
-                <option value="Death">Смерть</option>
-            </select>
-        </div>
+        <div class="card p-4 bg-light rounded">
+            <h5 class="mb-3">Фильтры и сортировка</h5>
+            <form class="row g-3 align-items-center">
+                <!-- Первый ряд: Имя и Имеющиеся заключения -->
+                <div class="col-md-6">
+                    <label for="searchName" class="form-label">Имя</label>
+                    <input type="text" class="form-control" id="searchName" placeholder="Иванов Иван Иванович">
+                </div>
+                <div class="col-md-6">
+                    <label for="conclusions" class="form-label">Имеющиеся заключения</label>
+                    <select class="form-select" id="conclusions">
+                        <option value="">Выберите заключение</option>
+                        <option value="Recovery" selected>Выздоровление</option>
+                        <option value="Disease">Болезнь</option>
+                        <option value="Death">Смерть</option>
+                    </select>
+                </div>
+                
 
-        <!-- Второй ряд: Число пациентов на странице и Сортировка пациентов -->
-        <div class="col-md-6 mb-3">
-            <label for="pageSize" class="form-label">Число пациентов на странице</label>
-            <input id="pageSize" type="number" class="form-control" value="5" min="1" max="100" step="1">
-        </div>
-        <div class="col-md-6 mb-3">
-            <label for="sortBy" class="form-label">Сортировка пациентов</label>
-            <select id="sortBy" class="form-select">
-                <option value="">Выберите сортировку</option>
-                <option value="NameAsc">По имени (А-Я)</option>
-                <option value="NameDesc">По имени (Я-А)</option>
-                <option value="CreateAsc">Сначала новые</option>
-                <option value="CreateDesc">Сначала старые</option>
-                <option value="InspectionAsc">Осмотры (сначала новые)</option>
-                <option value="InspectionDesc">Осмотры (сначала старые)</option>
-            </select>
-        </div>
+                <!-- Второй ряд: Число пациентов на странице и Сортировка пациентов -->
+                <div class="col-md-6 mb-3">
+                    <label for="pageSize" class="form-label">Число пациентов на странице</label>
+                    <input id="pageSize" type="number" class="form-control" value="5" min="1" max="100" step="1">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="sortBy" class="form-label">Сортировка пациентов</label>
+                    <select id="sortBy" class="form-select">
+                        <option value="">Выберите сортировку</option>
+                        <option value="NameAsc">По имени (А-Я)</option>
+                        <option value="NameDesc">По имени (Я-А)</option>
+                        <option value="CreateAsc">Сначала новые</option>
+                        <option value="CreateDesc">Сначала старые</option>
+                        <option value="InspectionAsc">Осмотры (сначала новые)</option>
+                        <option value="InspectionDesc">Осмотры (сначала старые)</option>
+                    </select>
+                </div>
 
-        <!-- Третий ряд: Флажки и кнопка поиска(да, не совсем как на макете, но зато красиво, нужно спросить ничего ли страшного если так на консультации) -->
-        <div class="col-auto form-check form-switch">
-            <input class="form-check-input" type="checkbox" id="scheduledVisits">
-            <label class="form-check-label" for="scheduledVisits">Есть запланированные визиты</label>
+                <!-- Третий ряд: Флажки и кнопка поиска(да, не совсем как на макете, но зато красиво, нужно спросить ничего ли страшного если так на консультации) -->
+                <div class="col-auto form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="scheduledVisits">
+                    <label class="form-check-label" for="scheduledVisits">Есть запланированные визиты</label>
+                </div>
+                <div class="col-auto form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="myPatients">
+                    <label class="form-check-label" for="myPatients">Мои пациенты</label>
+                </div>
+                <!-- ms-auto чтобы кнопка "Поиск" автоматически сместилась в правый угол формы а остальные влево-->
+                <div class="col-auto ms-auto">
+                    <button type="button" class="btn btn-primary" id="searchPatients">Поиск</button>
+                </div>
+            </form>
         </div>
-        <div class="col-auto form-check form-switch">
-            <input class="form-check-input" type="checkbox" id="myPatients">
-            <label class="form-check-label" for="myPatients">Мои пациенты</label>
-        </div>
-        <!-- ms-auto чтобы кнопка "Поиск" автоматически сместилась в правый угол формы а остальные влево-->
-        <div class="col-auto ms-auto">
-            <button type="button" class="btn btn-primary" id="searchPatients">Поиск</button>
-        </div>
-    </form>
-</div>
 
 
         <div class="mt-4 " id="patientsList">
             <!-- Список пациентов -->
         </div>
 
-        <!-- Пагинация -->
         <nav>
             <ul class="pagination justify-content-center" id="pagination">
                 <!-- Пагинация -->
@@ -109,7 +118,7 @@
         </nav>
     </main>
 
-    <!-- Модальное окно регистрации нового пациента -->
+    <!-- Выдвигающееся окно регистрации нового пациента -->
     <div class="modal fade" id="patientModal" tabindex="-1" aria-labelledby="patientModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -143,10 +152,13 @@
             </div>
         </div>
     </div>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js "></script>
+
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
         crossorigin="anonymous"></script>
+
     <script src="js/patients.js"></script>
 </body>
 </html>
