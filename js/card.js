@@ -5,6 +5,45 @@ document.addEventListener('DOMContentLoaded', function () {
     const patientId = urlParams.get('id');
     let inspectionsData = []; // Хранение данных осмотров
     let filterGrouped = true; // По умолчанию выбрано "Сгруппировать по повторным"
+    const icd10Container = document.getElementById('icd10-container');
+
+    function loadIcd10Options() {
+        fetch(`${apiBaseUrl}/api/dictionary/icd10/roots`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            data.forEach(item => {
+                const checkboxWrapper = document.createElement('div');
+                checkboxWrapper.className = 'form-check';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'form-check-input';
+                checkbox.id = item.id;
+                checkbox.value = item.id;
+
+                const label = document.createElement('label');
+                label.className = 'form-check-label';
+                label.setAttribute('for', item.id);
+                label.textContent = `${item.code} - ${item.name}`;
+
+                checkboxWrapper.appendChild(checkbox);
+                checkboxWrapper.appendChild(label);
+                icd10Container.appendChild(checkboxWrapper);
+            });
+        })
+        .catch(error => console.error('Ошибка загрузки диагнозов МКБ-10:', error));
+    }
+
+        // Функция для получения выбранных значений ICD-10
+        function getSelectedIcd10() {
+            const selectedCheckboxes = document.querySelectorAll('#icd10-container input[type="checkbox"]:checked');
+            return Array.from(selectedCheckboxes).map(checkbox => checkbox.value); // Возвращаем массив ID выбранных диагнозов
+        }
 
     // Функция для получения параметров из URL
     function getQueryParam(param, defaultValue) {
@@ -45,26 +84,22 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(error => console.error('Ошибка загрузки данных пациента:', error));
     }
 
-    // Загрузка осмотров пациента
     function loadInspections(page = 1) {
-        const pageSize = document.getElementById('pageSize').value || getQueryParam('pageSize', 5);
-        const icd10 = document.getElementById('icd10').value || getQueryParam('icd10', '');
-
-        // Определяем какой фильтр выбран
+        const pageSize = document.getElementById('pageSize').value || 5;
+        const selectedICD10 = getSelectedIcd10(); // Получаем выбранные значения с чекбоксов
         const grouped = filterGrouped;
-        const showAll = !filterGrouped;
-
-        const params = cleanParams({
-            page,
-            size: pageSize,
-            icd10,
-            grouped: grouped.toString(),
-            showAll: showAll.toString()
+        
+        // Создаем URLSearchParams
+        let params = new URLSearchParams({ 
+            page, 
+            size: pageSize, 
+            grouped: grouped.toString() 
         });
-
-        updateURL(params);
-
-        fetch(`${apiBaseUrl}/api/patient/${patientId}/inspections?${new URLSearchParams(params).toString()}`, {
+        
+        // Добавляем каждый выбранный icdRoot как отдельный параметр
+        selectedICD10.forEach(icdRoot => params.append('icdRoots', icdRoot));
+    
+        fetch(`${apiBaseUrl}/api/patient/${patientId}/inspections?${params.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`,
                 'Accept': 'application/json'
@@ -73,11 +108,12 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(response => response.json())
         .then(data => {
             inspectionsData = data.inspections;
-            renderInspections(); // Отрисовываем таблицу осмотров
-            setupPagination(data.pagination);
+            renderInspections();  // Отрисовка осмотров
+            setupPagination(data.pagination);  // Пагинация
         })
         .catch(error => console.error('Ошибка загрузки осмотров:', error));
     }
+    
 
     // Функция для отрисовки осмотров
     function renderInspections() {
@@ -279,10 +315,17 @@ function hideChildInspections(inspectionId, chainButton) {
         }
     }
 
+    // Обработка фильтра при нажатии на кнопку "Поиск"
     document.getElementById('filterBtn').addEventListener('click', function(event) {
         event.preventDefault();
-        loadInspections();
+        const selectedIcd10Ids = getSelectedIcd10();
+        console.log('Выбранные диагнозы МКБ-10:', selectedIcd10Ids);
+
+        // Далее используем selectedIcd10Ids для выполнения фильтрации осмотров
+        loadInspections(1, selectedIcd10Ids); // Передаем выбранные диагнозы в функцию загрузки осмотров
     });
+
+loadIcd10Options();
 
     setupFilters();
     loadPatientInfo();
