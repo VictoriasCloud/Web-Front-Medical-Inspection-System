@@ -70,25 +70,28 @@
                     <input id="pageSize" type="number" class="form-control" value="5" min="1" max="100" step="1">
                 </div>
         
-                <div class="col-md-3 d-flex align-items-center">
-                    <input class="form-check-input me-2" type="checkbox" id="groupByRepeat">
-                    <label class="form-check-label" for="groupByRepeat">
-                        Сгруппировать по повторным
-                    </label>               
-                </div>
-        
-                <div class="col-md-3 d-flex align-items-center">
-                    <input class="form-check-input me-2" type="checkbox" id="showAll">
-                    <label class="form-check-label" for="showAll">
-                        Показать все
-                    </label>
+                <div class="col-md-6 d-flex align-items-center">
+                    <label class="form-label me-3">Фильтрация осмотров:</label>
+                    <div class="form-check me-3">
+                        <input class="form-check-input" type="radio" name="filterOption" id="groupedOption" value="grouped">
+                        <label class="form-check-label" for="groupedOption">
+                            Сгруппировать по повторным
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="filterOption" id="allOption" value="all">
+                        <label class="form-check-label" for="allOption">
+                            Показать все
+                        </label>
+                    </div>
                 </div>
         
                 <div class="col-md-6 d-flex justify-content-end">
-                    <button class="btn btn-primary" id="filterBtn">Поиск</button>
+                    <button class="btn btn-primary" id="filterBtn" type="submit">Поиск</button>
                 </div>
             </form>
         </div>
+        
         
 
         <!-- Список осмотров -->

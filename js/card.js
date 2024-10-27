@@ -2,36 +2,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const authToken = localStorage.getItem('authToken');
     const apiBaseUrl = 'https://mis-api.kreosoft.space';
     const urlParams = new URLSearchParams(window.location.search);
-    const patientId = urlParams.get('id'); // Извлечение id пациента из URL
-
-    // Проверка наличия id пациента
-    if (!patientId) {
-        console.error('ID пациента не найден');
-        return;
-    }
-
-    // Функция для получения параметров из URL
-    function getQueryParam(param, defaultValue) {
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.has(param) ? urlParams.get(param) : defaultValue;
-    }
-
-    // Обновление URL без перезагрузки страницы
-    function updateURL(params) {
-        params.id = patientId; // Обязательно добавляем параметр id пациента
-        const urlParams = new URLSearchParams(params);
-        window.history.pushState(null, '', `${window.location.pathname}?${urlParams.toString()}`);
-    }
-
-    // Очистка параметров URL от пустых значений
-    function cleanParams(params) {
-        Object.keys(params).forEach(key => {
-            if (!params[key]) {
-                delete params[key];
-            }
-        });
-        return params;
-    }
+    const patientId = urlParams.get('id');
+    let inspectionsData = []; // Хранение данных осмотров
+    let filterGrouped = true; // По умолчанию выбрано "Сгруппировать по повторным"
 
     // Загрузка данных пациента
     function loadPatientInfo() {
@@ -49,22 +22,17 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(error => console.error('Ошибка загрузки данных пациента:', error));
     }
 
-    // Загрузка осмотров пациента с поддержкой пагинации и фильтров
+    // Загрузка осмотров пациента
     function loadInspections(page = 1) {
-        const pageSize = document.getElementById('pageSize').value || getQueryParam('pageSize', 5);  // Из формы или из URL
-        const icd10 = document.getElementById('icd10').value || getQueryParam('icd10', '');  // Из формы или из URL
-        const groupByRepeat = document.getElementById('groupByRepeat').checked || getQueryParam('groupByRepeat', false);
-        const showAll = document.getElementById('showAll').checked || getQueryParam('showAll', false);
+        const pageSize = document.getElementById('pageSize').value || getQueryParam('pageSize', 5);
+        const icd10 = document.getElementById('icd10').value || getQueryParam('icd10', '');
 
-        const params = cleanParams({
-            page,
-            size: pageSize,
-            icd10,
-            groupByRepeat,
-            showAll
-        });
+        const grouped = filterGrouped;
+        const showAll = !filterGrouped;
 
-        updateURL(params);  // Обновление URL без перезагрузки страницы
+        const params = cleanParams({ page, size: pageSize, icd10, grouped: grouped.toString(), showAll: showAll.toString() });
+
+        updateURL(params);
 
         fetch(`${apiBaseUrl}/api/patient/${patientId}/inspections?${new URLSearchParams(params).toString()}`, {
             headers: {
@@ -74,33 +42,45 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(response => response.json())
         .then(data => {
-            displayInspections(data.inspections);
+            inspectionsData = data.inspections;
+            renderInspections();
             setupPagination(data.pagination);
         })
         .catch(error => console.error('Ошибка загрузки осмотров:', error));
     }
 
-    //отображение осмотров пациента
-    function displayInspections(inspections) {
+    // Функция для рендеринга осмотров
+    function renderInspections() {
         const inspectionsList = document.getElementById('inspectionsList');
-        inspectionsList.innerHTML = ''; // Очищаем список перед добавлением новых осмотров, а вдруг
+        const fragment = document.createDocumentFragment(); // Используем фрагмент
 
-        // Создаем строку (row) для размещения карточек осмотров в строку 
-        const row = document.createElement('div');
-        row.className = 'row';
+        inspectionsData.forEach(inspection => {
+            const row = document.createElement('div');
+            row.className = 'row';
+            renderInspection(row, inspection);
+            fragment.appendChild(row);
+        });
 
-        inspections.forEach(inspection => {
-            const col = document.createElement('div');
-            col.className = 'col-md-6 mb-4'; 
+        inspectionsList.innerHTML = ''; // Очищаем список перед добавлением
+        inspectionsList.appendChild(fragment); // Добавляем фрагмент в DOM за один раз
+    }
 
+    // Функция для отрисовки одного осмотра
+    function renderInspection(row, inspection) {
+        const col = document.createElement('div');
+        col.className = 'col-md-6 col-12 mb-4';
+        const marginLeft = inspection.isChild ? '50px' : '0';
+
+        if (inspection.isEmpty) {
+            col.innerHTML = `<div class="card h-100 bg-light border-0" style="visibility:hidden; height: 0;"></div>`;
+        } else {
             const date = new Date(inspection.date).toLocaleDateString();
             const conclusion = inspection.conclusion || 'Не указано';
             const diagnosis = inspection.diagnosis ? `${inspection.diagnosis.code} - ${inspection.diagnosis.name}` : 'Не указано';
             const doctor = inspection.doctor || 'Не указано';
 
-            // Создаем карточку осмотра
             col.innerHTML = `
-                <div class="card h-100 bg-light inspection-card" data-inspection-id="${inspection.id}">
+                <div class="card h-100 bg-light inspection-card" data-inspection-id="${inspection.id}" style="margin-left: ${marginLeft}">
                     <div class="card-body">
                         <h5 class="card-title">${date} - ${conclusion}</h5>
                         <p class="card-text"><strong>Основной диагноз:</strong> ${diagnosis}</p>
@@ -110,71 +90,81 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                 </div>`;
 
-        // Если заключение "Death", делаем выделение границей КРАСНОЙ
-        if (conclusion === 'Death') {
-            col.querySelector('.card').classList.add('border-danger');
+            if (filterGrouped && inspection.hasChain) {
+                const chainButton = document.createElement('button');
+                chainButton.className = 'btn btn-link';
+                const isExpanded = inspection.isExpanded || false;
+                chainButton.textContent = isExpanded ? '- Скрыть повторные осмотры' : '+ Показать повторные осмотры';
+                chainButton.setAttribute('data-expanded', isExpanded.toString());
+                chainButton.addEventListener('click', () => {
+                    toggleChildInspections(inspection.id, chainButton);
+                });
+                col.querySelector('.card-body').appendChild(chainButton);
+            }
         }
 
-
-            row.appendChild(col);
-        });
-
-        inspectionsList.appendChild(row); // Добавляем строку с осмотрами в список всех осмотров
+        row.appendChild(col);
     }
 
-    // Функция для установки пагинации
-    function setupPagination(pagination) {
-        const paginationElement = document.getElementById('pagination');
-        paginationElement.innerHTML = ''; // Очищаем пагинацию
+    // Логика показа/скрытия дочерних осмотров
+    function toggleChildInspections(inspectionId, chainButton) {
+        const isExpanded = chainButton.getAttribute('data-expanded') === 'true';
 
-        const totalPages = pagination.count;
-        const currentPage = pagination.current;
-        const pageSize = getQueryParam('pageSize', 5);
-
-        // Добавляем кнопку для предыдущей страницы(прикольно вроде)
-        if (currentPage > 1) {
-            const prevPageItem = document.createElement('li');
-            prevPageItem.className = 'page-item';
-            prevPageItem.innerHTML = `<a class="page-link" href="#">Предыдущая</a>`;
-            prevPageItem.addEventListener('click', function (event) {
-                event.preventDefault();
-                loadInspections(currentPage - 1);
-            });
-            paginationElement.appendChild(prevPageItem);
-        }
-
-        // Добавляем кнопки для всех страниц
-        for (let i = 1; i <= totalPages; i++) {
-            const pageItem = document.createElement('li');
-            pageItem.className = `page-item ${i === currentPage ? 'active' : ''}`;
-            pageItem.innerHTML = `<a class="page-link" href="#">${i}</a>`;
-            pageItem.addEventListener('click', function (event) {
-                event.preventDefault();
-                loadInspections(i);
-            });
-            paginationElement.appendChild(pageItem);
-        }
-
-        // Добавляем кнопку для следующей страницы
-        if (currentPage < totalPages) {
-            const nextPageItem = document.createElement('li');
-            nextPageItem.className = 'page-item';
-            nextPageItem.innerHTML = `<a class="page-link" href="#">Следующая</a>`;
-            nextPageItem.addEventListener('click', function (event) {
-                event.preventDefault();
-                loadInspections(currentPage + 1);
-            });
-            paginationElement.appendChild(nextPageItem);
+        if (isExpanded) {
+            hideChildInspections(inspectionId, chainButton);
+        } else {
+            loadChildInspections(inspectionId, chainButton);
         }
     }
 
-    // Обработчик кнопки поиска
-    document.getElementById('filterBtn').addEventListener('click', function(event) {
-        event.preventDefault();
-        loadInspections(); // Загружаем осмотры при применении фильтров
-    });
+    // Загрузка и добавление дочерних осмотров
+    function loadChildInspections(inspectionId, chainButton) {
+        fetch(`${apiBaseUrl}/api/inspection/${inspectionId}/chain`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(childInspections => {
+            addChildInspections(inspectionId, childInspections);
+            const parentIndex = inspectionsData.findIndex(item => item.id === inspectionId);
+            if (parentIndex !== -1) {
+                inspectionsData[parentIndex].isExpanded = true;
+            }
+            chainButton.textContent = '- Скрыть повторные осмотры';
+            chainButton.setAttribute('data-expanded', 'true');
+            renderInspections();
+        })
+        .catch(error => console.error('Ошибка загрузки повторных осмотров:', error));
+    }
 
-    // Загружаем данные при загрузке страницы
+    // Добавление дочерних осмотров в массив
+    function addChildInspections(parentId, childInspections) {
+        const parentIndex = inspectionsData.findIndex(item => item.id === parentId);
+
+        if (parentIndex !== -1) {
+            childInspections.forEach((child, index) => {
+                child.isChild = true;
+                child.previousId = parentId;
+                inspectionsData.splice(parentIndex + 1 + index, 0, child); // Добавляем дочерние элементы после родителя
+            });
+        }
+    }
+
+    // Функция для скрытия дочерних осмотров
+    function hideChildInspections(inspectionId, chainButton) {
+        inspectionsData = inspectionsData.filter(item => item.previousId !== inspectionId);
+        const parentIndex = inspectionsData.findIndex(item => item.id === inspectionId);
+        if (parentIndex !== -1) {
+            inspectionsData[parentIndex].isExpanded = false;
+        }
+        chainButton.textContent = '+ Показать повторные осмотры';
+        chainButton.setAttribute('data-expanded', 'false');
+        renderInspections(); // Перерисовка после удаления
+    }
+
+    setupFilters();
     loadPatientInfo();
-    loadInspections(getQueryParam('page', 1));
+    loadInspections();
 });

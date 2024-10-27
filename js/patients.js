@@ -5,6 +5,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const authToken = localStorage.getItem('authToken');
     const apiBaseUrl = 'https://mis-api.kreosoft.space';
 
+    const registerBtn = document.getElementById('registerPatientBtn');
+    
+    // Инициализация модального окна Bootstrap
+    const modal = new bootstrap.Modal(document.getElementById('patientModal'));
+
+    // Открытие модального окна при клике на кнопку "Регистрация нового пациента"
+    registerBtn.addEventListener('click', function () {
+        modal.show();
+    });
+
     // Получение параметров из URL
     function getQueryParam(param, defaultValue) {
         const urlParams = new URLSearchParams(window.location.search);
