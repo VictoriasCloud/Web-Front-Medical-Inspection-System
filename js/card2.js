@@ -222,6 +222,17 @@ function addChildInspections(parentInspection, childInspections, parentCell, col
         columnContainer.insertBefore(childCell, insertAfter); // Вставляем дочерние осмотры сразу под родителем
     });
 }
+// Редирект на страницу создания осмотра (createCard.html) при нажатии на кнопку "Добавить осмотр"
+document.getElementById('addInspectionBtn').addEventListener('click', function() {
+    const patientId = new URLSearchParams(window.location.search).get('id'); // Получаем ID пациента из URL (если есть)
+    if (patientId) {
+        window.location.href = `createCard.html?id=${patientId}`;
+    } else {
+        // Если ID пациента нет, просто переходим на createCard.html
+        window.location.href = 'createCard.html';
+    }
+});
+
 
 // Скрытие дочерних осмотров
 function hideChildInspections(inspection, chainButton, columnContainer) {
@@ -245,8 +256,6 @@ style.innerHTML = `
 `;
 document.head.appendChild(style);
 
-
-    
     // Функция для настройки фильтров
     function setupFilters() {
         const filterOptions = document.getElementsByName('filterOption');

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Создание осмотра</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <nav class="navbar navbar-expand bg-primary shadow-sm">
+
+            <div class="container-fluid">
+                <ion-icon name="skull-outline" class="ms-2 me-2" style="color: white; transform: scale(2);"></ion-icon>
+
+                <div class="navbar-header me-4">
+                    <div class="row text-end">
+                        <div class="mt-1" style="color: white">Try not to</div>
+                        <div class="mb-1" style="color: white; font-weight: bold;">Die</div>
+                    </div>
+                </div>
+
+                <div class="collapse navbar-collapse">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="nav-link text-white me-4" href="/patients.html">Пациенты</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white me-4" href="/consultations.html">Консультации</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white me-4" href="/reports.html">Отчеты и статистика</a>
+                        </li>
+                    </ul>
+                    <div id="user-info" class="dropdown">
+                        <button class="btn btn-primary dropdown-toggle" type="button" id="userDropdown"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            Вход
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="/profile.html">Профиль</a></li>
+                            <li><a class="dropdown-item" id="logout">Выход</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+<div class="container mt-5">
+    <h1>Создание осмотра</h1>
+
+    <!-- Основная информация пациента -->
+    <div class="card mb-3 p-3">
+        <h3 id="patientName">Имя пациента <span>👤</span></h3>
+        <div class="d-flex justify-content-between">
+            <span id="patientDob">Дата рождения: --</span>
+            <span>
+                <input type="checkbox" id="primaryInspection" class="form-check-input">
+                <label for="primaryInspection" class="form-check-label">Первичный осмотр</label>
+                <input type="checkbox" id="secondaryInspection" class="form-check-input ms-3">
+                <label for="secondaryInspection" class="form-check-label">Повторный осмотр</label>
+            </span>
+        </div>
+        <div class="mt-3">
+            <label for="inspectionDate">Дата осмотра</label>
+            <input type="datetime-local" id="inspectionDate" class="form-control" required>
+        </div>
+    </div>
+
+    <!-- Жалобы -->
+    <div class="card mb-3 p-3">
+        <h4>Жалобы</h4>
+        <textarea id="complaints" class="form-control" rows="2"></textarea>
+    </div>
+
+    <!-- Анамнез заболевания -->
+    <div class="card mb-3 p-3">
+        <h4>Анамнез заболевания</h4>
+        <textarea id="anamnesis" class="form-control" rows="3"></textarea>
+    </div>
+
+<!-- Консультация -->
+<div class="card mb-3 p-3">
+    <h4>Консультация</h4>
+    <div class="form-check">
+        <input type="checkbox" id="needConsultation" class="form-check-input">
+        <label for="needConsultation" class="form-check-label">Требуется консультация</label>
+    </div>
+    <div class="form-group position-relative">
+        <label for="consultationSpecialty">Специализация консультанта</label>
+        <input type="text" id="consultationSpecialty" class="form-control mt-2" placeholder="Введите специальность" disabled>
+        <div id="consultationResults" class="list-group position-absolute w-100" style="z-index: 10; max-height: 200px; overflow-y: auto; display: none;"></div>
+    </div>
+    <textarea id="consultationComment" class="form-control mt-2" placeholder="Комментарий" disabled></textarea>
+    <button id="addConsultation" class="btn btn-primary mt-2" disabled>Добавить консультацию</button>
+
+    
+<!-- Контейнер для списка добавленных консультаций -->
+<div id="consultationList" class="mt-3"></div>
+
+</div>
+    <!-- Диагнозы -->
+    <div class="card mb-3 p-3">
+        <h4>Диагнозы</h4>
+        <div class="form-group position-relative">
+            <label for="diagnosisSearch">Поиск диагноза (ICD-10):</label>
+            <input type="text" id="diagnosisSearch" class="form-control" placeholder="Начните вводить диагноз или код">
+            <div id="diagnosisResults" class="list-group position-absolute w-100" style="z-index: 10; max-height: 200px; overflow-y: auto; display: none;"></div>
+            <div class="form-group mt-3">
+                <label for="diagnosisDescription">Описание диагноза (по желанию):</label>
+                <textarea id="diagnosisDescription" class="form-control" placeholder="Введите описание диагноза"></textarea>
+            </div>
+            
+            <div class="mt-3">
+                <h5>Тип диагноза:</h5>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="diagnosisType" id="mainType" value="Основной">
+                    <label class="form-check-label" for="mainType">Основной</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="diagnosisType" id="secondaryType" value="Сопутствующий">
+                    <label class="form-check-label" for="secondaryType">Сопутствующий</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="diagnosisType" id="complicationType" value="Осложнение">
+                    <label class="form-check-label" for="complicationType">Осложнение</label>
+                </div>
+            </div>
+            
+        </div>
+        
+        <button id="addDiagnosisBtn" class="btn btn-primary mt-2">Добавить диагноз</button>
+        <div id="diagnosisList" class="mt-3"></div>
+    </div>
+
+    <!-- Рекомендации по лечению -->
+<div class="card mb-3 p-3">
+    <h4>Рекомендации по лечению</h4>
+    <textarea id="treatment" class="form-control" rows="3" placeholder="Введите рекомендации по лечению..."></textarea>
+</div>
+
+
+<!-- Заключение -->
+<div class="card mb-3 p-3">
+    <h4>Заключение</h4>
+    <select id="conclusionType" class="form-select">
+        <option value="Disease">Болезнь</option>
+        <option value="Death">Смерть</option>
+        <option value="Recovery">Выздоровление</option>
+    </select>
+
+    <!-- Поле для даты следующего визита -->
+    <div id="nextVisit" class="mt-3" style="display: none;">
+        <label for="nextVisitDate">Дата следующего визита</label>
+        <input type="datetime-local" id="nextVisitDate" class="form-control">
+    </div>
+
+    <!-- Поле для даты и времени смерти -->
+    <div id="deathDate" class="mt-3" style="display: none;">
+        <label for="deathDateInput">Дата и время смерти</label>
+        <input type="datetime-local" id="deathDateInput" class="form-control">
+    </div>
+</div>
+
+
+    <button id="saveInspection" class="btn btn-success">Сохранить осмотр</button>
+</div>
+
+<script src="js/createCard.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
