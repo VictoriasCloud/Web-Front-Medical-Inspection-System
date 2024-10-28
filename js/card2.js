@@ -39,11 +39,11 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(error => console.error('Ошибка загрузки диагнозов МКБ-10:', error));
     }
 
-        // Функция для получения выбранных значений ICD-10
-        function getSelectedIcd10() {
-            const selectedCheckboxes = document.querySelectorAll('#icd10-container input[type="checkbox"]:checked');
-            return Array.from(selectedCheckboxes).map(checkbox => checkbox.value); // Возвращаем массив ID выбранных диагнозов
-        }
+    // Функция для получения выбранных значений ICD-10
+    function getSelectedIcd10() {
+        const selectedCheckboxes = document.querySelectorAll('#icd10-container input[type="checkbox"]:checked');
+        return Array.from(selectedCheckboxes).map(checkbox => checkbox.value); // Возвращаем массив ID выбранных диагнозов
+    }
 
     // Функция для получения параметров из URL
     function getQueryParam(param, defaultValue) {
@@ -113,160 +113,137 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .catch(error => console.error('Ошибка загрузки осмотров:', error));
     }
-    
-
-    // Функция для отрисовки осмотров
     function renderInspections() {
         const inspectionsList = document.getElementById('inspectionsList');
         inspectionsList.innerHTML = ''; // Очищаем список перед добавлением новых осмотров
-
-        const row = document.createElement('div');
-        row.className = 'row';
-
-        inspectionsData.forEach((inspection, index) => {
-            renderInspection(row, inspection);
-
-            // Если элемент последний и нечётный, добавляем пустую ячейку
-            // if ((index + 1) % 2 !== 0 && index === inspectionsData.length - 1) {
-            //     const emptyCol = document.createElement('div');
-            //     emptyCol.className = 'col-md-6 col-12 mb-4 invisible'; // Пустая невидимая ячейка
-            //     emptyCol.innerHTML = `<div class="card bg-light border-0"></div>`;
-            //     row.appendChild(emptyCol);
-            // }
+    
+        // Создаем контейнер и два столбца для осмотров
+        const container = document.createElement('div');
+        container.className = 'row'; // Контейнер Bootstrap для двух колонок
+    
+        const leftColumn = document.createElement('div');
+        const rightColumn = document.createElement('div');
+        leftColumn.className = 'col-12 col-md-6'; // Полная ширина на узких экранах, 50% на широких
+        rightColumn.className = 'col-12 col-md-6';
+    
+        const half = Math.ceil(inspectionsData.length / 2);
+    
+        // Заполняем первый столбец
+        inspectionsData.slice(0, half).forEach((inspection) => {
+            const col = document.createElement('div');
+            col.className = 'inspection-cell mb-4'; // Класс для отступов и фиксированного размера ячеек
+            renderInspection(col, inspection, leftColumn);
         });
-
-        inspectionsList.appendChild(row);
+    
+        // Заполняем второй столбец
+        inspectionsData.slice(half).forEach((inspection) => {
+            const col = document.createElement('div');
+            col.className = 'inspection-cell mb-4';
+            renderInspection(col, inspection, rightColumn);
+        });
+    
+        container.appendChild(leftColumn);
+        container.appendChild(rightColumn);
+        inspectionsList.appendChild(container);
     }
-
-// Функция для отрисовки одного осмотра
-function renderInspection(row, inspection) {
-    const col = document.createElement('div');
-    col.className = 'col-md-6 col-12 mb-4';
-
-    // Увеличение отступа для дочерних осмотров
-    const marginLeft = inspection.isChild ? '50px' : '0';
-
-    if (inspection.isEmpty) {
-        col.innerHTML = `<div class="card h-100 bg-light border-0" style="visibility:hidden; height: 0;"></div>`;
-    } else {
-        const date = new Date(inspection.date).toLocaleDateString();
-        const conclusion = inspection.conclusion || 'Не указано';
-        const diagnosis = inspection.diagnosis ? `${inspection.diagnosis.code} - ${inspection.diagnosis.name}` : 'Не указано';
-        const doctor = inspection.doctor || 'Не указано';
-
-        col.innerHTML = `
-            <div class="card h-100 bg-light inspection-card" data-inspection-id="${inspection.id}" style="margin-left: ${marginLeft}">
-                <div class="card-body">
-                    <h5 class="card-title">${date} - ${conclusion}</h5>
-                    <p class="card-text"><strong>Основной диагноз:</strong> ${diagnosis}</p>
-                    <p class="card-text"><strong>Медицинский работник:</strong> ${doctor}</p>
-                    <p class="card-text"><strong>Заключение:</strong> ${conclusion}</p>
-                    <a href="#" class="btn btn-primary">Детали осмотра</a>
-                </div>
+    
+    // Отрисовка осмотра с дочерними элементами
+    function renderInspection(cell, inspection, columnContainer) {
+        const inspectionBlock = document.createElement('div');
+        inspectionBlock.className = 'inspection-block d-flex flex-column justify-content-between h-100 p-3 bg-light border rounded';
+        inspectionBlock.setAttribute('data-id', inspection.id); // Устанавливаем идентификатор для проверки
+    
+        inspectionBlock.innerHTML = `
+            <div>
+                <h5>${new Date(inspection.date).toLocaleDateString()} - ${inspection.conclusion || 'Не указано'}</h5>
+                <p><strong>Основной диагноз:</strong> ${inspection.diagnosis ? inspection.diagnosis.code + ' - ' + inspection.diagnosis.name : 'Не указано'}</p>
+                <p><strong>Медицинский работник:</strong> ${inspection.doctor || 'Не указано'}</p>
+                <p><strong>Заключение:</strong> ${inspection.conclusion || 'Не указано'}</p>
+            </div>
+            <div>
+                <a href="#" class="btn btn-primary mt-auto">Детали осмотра</a>
             </div>`;
-
+    
+        // Добавляем кнопку для раскрытия дочерних осмотров
         if (filterGrouped && inspection.hasChain) {
             const chainButton = document.createElement('button');
             chainButton.className = 'btn btn-link';
-            const isExpanded = inspection.isExpanded || false;
-            chainButton.textContent = isExpanded ? '- Скрыть повторные осмотры' : '+ Показать повторные осмотры';
-            chainButton.setAttribute('data-expanded', isExpanded.toString());
+            chainButton.textContent = inspection.isExpanded ? '- Скрыть повторные осмотры' : '+ Показать повторные осмотры';
             chainButton.addEventListener('click', () => {
-                toggleChildInspections(inspection.id, chainButton);
+                toggleChildInspections(inspection, cell, chainButton, columnContainer);
             });
-            col.querySelector('.card-body').appendChild(chainButton);
+            inspectionBlock.querySelector('div').appendChild(chainButton);
         }
+    
+        cell.appendChild(inspectionBlock);
+        columnContainer.appendChild(cell);
     }
-
-    row.appendChild(col);
-}
-
-    // Функция для отображения или скрытия дочерних осмотров
-    function toggleChildInspections(inspectionId, chainButton) {
-        const isExpanded = chainButton.getAttribute('data-expanded') === 'true';
-
-        if (isExpanded) {
-            hideChildInspections(inspectionId, chainButton);
+    
+    // Переключение отображения дочерних осмотров
+    function toggleChildInspections(inspection, parentCell, chainButton, columnContainer) {
+        if (inspection.isExpanded) {
+            hideChildInspections(inspection, chainButton, columnContainer);
         } else {
-            loadChildInspections(inspectionId, chainButton);
+            loadChildInspections(inspection, parentCell, chainButton, columnContainer);
         }
     }
-
+    
     // Загрузка дочерних осмотров
-    function loadChildInspections(inspectionId, chainButton) {
-        const authToken = localStorage.getItem('authToken');
-
-        if (!inspectionId) {
-            console.error('Отсутствует идентификатор осмотра для загрузки дочерних элементов');
-            return;
-        }
-
-        fetch(`${apiBaseUrl}/api/inspection/${inspectionId}/chain`, {
+    function loadChildInspections(inspection, parentCell, chainButton, columnContainer) {
+        fetch(`${apiBaseUrl}/api/inspection/${inspection.id}/chain`, {
             headers: {
-                'Authorization': `Bearer ${authToken}`,
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
                 'Accept': 'application/json'
             }
         })
         .then(response => response.json())
         .then(childInspections => {
-            addChildInspections(inspectionId, childInspections);
-            const parentIndex = inspectionsData.findIndex(item => item.id === inspectionId);
-            if (parentIndex !== -1) {
-                inspectionsData[parentIndex].isExpanded = true;
-            }
+            addChildInspections(inspection, childInspections, parentCell, columnContainer);
+            inspection.isExpanded = true;
             chainButton.textContent = '- Скрыть повторные осмотры';
-            chainButton.setAttribute('data-expanded', 'true');
-            renderInspections(); // Обновляем таблицу после загрузки дочерних элементов
         })
         .catch(error => console.error('Ошибка загрузки повторных осмотров:', error));
     }
-
-// Function to add child inspections without unnecessary shifting
-function addChildInspections(parentId, childInspections) {
-    const parentIndex = inspectionsData.findIndex(item => item.id === parentId);
-
-    if (parentIndex !== -1) {
-        childInspections.forEach((child, index) => {
-            child.isChild = true;
-            child.previousId = parentId;
-
-            // Calculate where to insert the child
-            let insertionIndex = parentIndex + (index + 1) * 2;  // Keep gaps for empty cells
-
-            // If the position already has an empty cell, use it
-            if (inspectionsData[insertionIndex] && inspectionsData[insertionIndex].isEmpty) {
-                inspectionsData[insertionIndex] = child;  // Replace empty cell with child inspection
-            } else {
-                // Add a new empty cell before inserting the child if needed
-                if (!inspectionsData[insertionIndex]) {
-                    inspectionsData.push({ id: `empty-${parentId}-${index}`, isEmpty: true, parentId: parentId });
-                }
-                // Insert the child at the calculated position
-                inspectionsData.splice(insertionIndex, 0, child);
-            }
+    
+    // Добавление дочерних осмотров в виде отдельных ячеек в тот же столбец
+    function addChildInspections(parentInspection, childInspections, parentCell, columnContainer) {
+        let insertAfter = parentCell.nextSibling;
+    
+        childInspections.forEach(child => {
+            const childCell = document.createElement('div');
+            childCell.className = 'inspection-cell mb-4 child-inspection';
+            childCell.setAttribute('data-parent-id', parentInspection.id); // Устанавливаем родительский ID
+            renderInspection(childCell, child, columnContainer);
+    
+            columnContainer.insertBefore(childCell, insertAfter); // Вставляем дочерние осмотры сразу под родителем
         });
     }
-}
-
-// Function to hide child inspections and ensure empty cells are correctly handled
-function hideChildInspections(inspectionId, chainButton) {
-    inspectionsData = inspectionsData.filter(item => {
-        // Keep only those that don't belong to the current parent
-        return !(item.previousId === inspectionId || (item.isEmpty && item.parentId === inspectionId));
-    });
-
-    const parentIndex = inspectionsData.findIndex(item => item.id === inspectionId);
-    if (parentIndex !== -1) {
-        inspectionsData[parentIndex].isExpanded = false;
+    
+    // Скрытие дочерних осмотров
+    function hideChildInspections(inspection, chainButton, columnContainer) {
+        // Находим все дочерние элементы с атрибутом data-parent-id равным id родителя
+        const childCells = columnContainer.querySelectorAll(`[data-parent-id="${inspection.id}"]`);
+        childCells.forEach(child => child.remove()); // Удаляем все дочерние элементы
+        inspection.isExpanded = false;
+        chainButton.textContent = '+ Показать повторные осмотры';
     }
-    chainButton.textContent = '+ Показать повторные осмотры';
-    chainButton.setAttribute('data-expanded', 'false');
-    renderInspections();  // Re-render the inspections after hiding children
-}
+    
+// CSS для фиксированной высоты, ширины ячеек и отступа для дочерних элементов
+const style = document.createElement('style');
+style.innerHTML = `
+    .inspection-cell {
+        width: 100%;
+        height: 400px; /* Фиксированная высота для каждой ячейки */
+        display: flex;
+        flex-direction: column;
+    }
+    .child-inspection .inspection-block {
+        margin-left: 20px; /* Отступ слева для дочерних элементов */
+    }
+`;
+document.head.appendChild(style);
 
-
-
-
+    
     // Функция для настройки фильтров
     function setupFilters() {
         const filterOptions = document.getElementsByName('filterOption');
@@ -333,8 +310,7 @@ function hideChildInspections(inspectionId, chainButton) {
         loadInspections(1, selectedIcd10Ids); // Передаем выбранные диагнозы в функцию загрузки осмотров
     });
 
-loadIcd10Options();
-
+    loadIcd10Options();
     setupFilters();
     loadPatientInfo();
     loadInspections(getQueryParam('page', 1));
