@@ -113,6 +113,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .catch(error => console.error('Ошибка загрузки осмотров:', error));
     }
+
     function renderInspections() {
         const inspectionsList = document.getElementById('inspectionsList');
         inspectionsList.innerHTML = ''; // Очищаем список перед добавлением новых осмотров
@@ -147,88 +148,92 @@ document.addEventListener('DOMContentLoaded', function () {
         inspectionsList.appendChild(container);
     }
     
-    // Отрисовка осмотра с дочерними элементами
-    function renderInspection(cell, inspection, columnContainer) {
-        const inspectionBlock = document.createElement('div');
-        inspectionBlock.className = 'inspection-block d-flex flex-column justify-content-between h-100 p-3 bg-light border rounded';
-        inspectionBlock.setAttribute('data-id', inspection.id); // Устанавливаем идентификатор для проверки
-    
-        inspectionBlock.innerHTML = `
-            <div>
-                <h5>${new Date(inspection.date).toLocaleDateString()} - ${inspection.conclusion || 'Не указано'}</h5>
-                <p><strong>Основной диагноз:</strong> ${inspection.diagnosis ? inspection.diagnosis.code + ' - ' + inspection.diagnosis.name : 'Не указано'}</p>
-                <p><strong>Медицинский работник:</strong> ${inspection.doctor || 'Не указано'}</p>
-                <p><strong>Заключение:</strong> ${inspection.conclusion || 'Не указано'}</p>
-            </div>
-            <div>
-                <a href="#" class="btn btn-primary mt-auto">Детали осмотра</a>
-            </div>`;
-    
-        // Добавляем кнопку для раскрытия дочерних осмотров
-        if (filterGrouped && inspection.hasChain) {
-            const chainButton = document.createElement('button');
-            chainButton.className = 'btn btn-link';
-            chainButton.textContent = inspection.isExpanded ? '- Скрыть повторные осмотры' : '+ Показать повторные осмотры';
-            chainButton.addEventListener('click', () => {
-                toggleChildInspections(inspection, cell, chainButton, columnContainer);
-            });
-            inspectionBlock.querySelector('div').appendChild(chainButton);
-        }
-    
-        cell.appendChild(inspectionBlock);
-        columnContainer.appendChild(cell);
-    }
-    
-    // Переключение отображения дочерних осмотров
-    function toggleChildInspections(inspection, parentCell, chainButton, columnContainer) {
-        if (inspection.isExpanded) {
-            hideChildInspections(inspection, chainButton, columnContainer);
-        } else {
-            loadChildInspections(inspection, parentCell, chainButton, columnContainer);
-        }
-    }
-    
-    // Загрузка дочерних осмотров
-    function loadChildInspections(inspection, parentCell, chainButton, columnContainer) {
-        fetch(`${apiBaseUrl}/api/inspection/${inspection.id}/chain`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(childInspections => {
-            addChildInspections(inspection, childInspections, parentCell, columnContainer);
-            inspection.isExpanded = true;
-            chainButton.textContent = '- Скрыть повторные осмотры';
-        })
-        .catch(error => console.error('Ошибка загрузки повторных осмотров:', error));
-    }
-    
-    // Добавление дочерних осмотров в виде отдельных ячеек в тот же столбец
-    function addChildInspections(parentInspection, childInspections, parentCell, columnContainer) {
-        let insertAfter = parentCell.nextSibling;
-    
-        childInspections.forEach(child => {
-            const childCell = document.createElement('div');
-            childCell.className = 'inspection-cell mb-4 child-inspection';
-            childCell.setAttribute('data-parent-id', parentInspection.id); // Устанавливаем родительский ID
-            renderInspection(childCell, child, columnContainer);
-    
-            columnContainer.insertBefore(childCell, insertAfter); // Вставляем дочерние осмотры сразу под родителем
+// Изменённая функция для добавления осмотра с поддержкой уровня вложенности
+function renderInspection(cell, inspection, columnContainer, level = 0) {
+    const inspectionBlock = document.createElement('div');
+    inspectionBlock.className = 'inspection-block d-flex flex-column justify-content-between h-100 p-3 bg-light border rounded';
+    inspectionBlock.setAttribute('data-id', inspection.id); // Устанавливаем идентификатор для проверки
+
+    // Устанавливаем отступ слева на основе уровня вложенности
+    inspectionBlock.style.marginLeft = `${level * 30}px`;
+
+    inspectionBlock.innerHTML = `
+        <div>
+            <h5>${new Date(inspection.date).toLocaleDateString()} - ${inspection.conclusion || 'Не указано'}</h5>
+            <p><strong>Основной диагноз:</strong> ${inspection.diagnosis ? inspection.diagnosis.code + ' - ' + inspection.diagnosis.name : 'Не указано'}</p>
+            <p><strong>Медицинский работник:</strong> ${inspection.doctor || 'Не указано'}</p>
+            <p><strong>Заключение:</strong> ${inspection.conclusion || 'Не указано'}</p>
+        </div>
+        <div>
+            <a href="#" class="btn btn-primary mt-auto">Детали осмотра</a>
+        </div>`;
+
+    // Добавляем кнопку для раскрытия дочерних осмотров
+    if (filterGrouped && inspection.hasChain) {
+        const chainButton = document.createElement('button');
+        chainButton.className = 'btn btn-link';
+        chainButton.textContent = inspection.isExpanded ? '- Скрыть повторные осмотры' : '+ Показать повторные осмотры';
+        chainButton.addEventListener('click', () => {
+            toggleChildInspections(inspection, cell, chainButton, columnContainer, level + 1); // Увеличиваем уровень вложенности
         });
+        inspectionBlock.querySelector('div').appendChild(chainButton);
     }
-    
-    // Скрытие дочерних осмотров
-    function hideChildInspections(inspection, chainButton, columnContainer) {
-        // Находим все дочерние элементы с атрибутом data-parent-id равным id родителя
-        const childCells = columnContainer.querySelectorAll(`[data-parent-id="${inspection.id}"]`);
-        childCells.forEach(child => child.remove()); // Удаляем все дочерние элементы
-        inspection.isExpanded = false;
-        chainButton.textContent = '+ Показать повторные осмотры';
+
+    cell.appendChild(inspectionBlock);
+    columnContainer.appendChild(cell);
+}
+
+// Переключение отображения дочерних осмотров с учётом уровня вложенности
+function toggleChildInspections(inspection, parentCell, chainButton, columnContainer, level) {
+    if (inspection.isExpanded) {
+        hideChildInspections(inspection, chainButton, columnContainer);
+    } else {
+        loadChildInspections(inspection, parentCell, chainButton, columnContainer, level);
     }
+}
+
+// Загрузка дочерних осмотров с учётом уровня вложенности
+function loadChildInspections(inspection, parentCell, chainButton, columnContainer, level) {
+    fetch(`${apiBaseUrl}/api/inspection/${inspection.id}/chain`, {
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(childInspections => {
+        addChildInspections(inspection, childInspections, parentCell, columnContainer, level);
+        inspection.isExpanded = true;
+        chainButton.textContent = '- Скрыть повторные осмотры';
+    })
+    .catch(error => console.error('Ошибка загрузки повторных осмотров:', error));
+}
+
+// Добавление дочерних осмотров с учётом уровня вложенности
+function addChildInspections(parentInspection, childInspections, parentCell, columnContainer, level) {
+    let insertAfter = parentCell.nextSibling;
+
+    childInspections.forEach(child => {
+        const childCell = document.createElement('div');
+        childCell.className = 'inspection-cell mb-4 child-inspection';
+        childCell.setAttribute('data-parent-id', parentInspection.id); // Устанавливаем родительский ID
+        renderInspection(childCell, child, columnContainer, level); // Передаём уровень вложенности
+
+        columnContainer.insertBefore(childCell, insertAfter); // Вставляем дочерние осмотры сразу под родителем
+    });
+}
+
+// Скрытие дочерних осмотров
+function hideChildInspections(inspection, chainButton, columnContainer) {
+    // Находим все дочерние элементы с атрибутом data-parent-id равным id родителя
+    const childCells = columnContainer.querySelectorAll(`[data-parent-id="${inspection.id}"]`);
+    childCells.forEach(child => child.remove()); // Удаляем все дочерние элементы
+    inspection.isExpanded = false;
+    chainButton.textContent = '+ Показать повторные осмотры';
+}
+
     
-// CSS для фиксированной высоты, ширины ячеек и отступа для дочерних элементов
+// CSS для фиксированной высоты и ширины ячеек
 const style = document.createElement('style');
 style.innerHTML = `
     .inspection-cell {
@@ -237,11 +242,9 @@ style.innerHTML = `
         display: flex;
         flex-direction: column;
     }
-    .child-inspection .inspection-block {
-        margin-left: 20px; /* Отступ слева для дочерних элементов */
-    }
 `;
 document.head.appendChild(style);
+
 
     
     // Функция для настройки фильтров
