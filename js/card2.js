@@ -168,8 +168,8 @@ function renderInspection(cell, inspection, columnContainer, level = 0) {
             <a href="#" class="btn btn-primary mt-auto">Детали осмотра</a>
         </div>`;
 
-    // Добавляем кнопку для раскрытия дочерних осмотров
-    if (filterGrouped && inspection.hasChain) {
+    // Добавляем кнопку для раскрытия дочерних осмотров, если есть дочерние элементы
+    if ((filterGrouped && inspection.hasChain) || inspection.hasNested) {
         const chainButton = document.createElement('button');
         chainButton.className = 'btn btn-link';
         chainButton.textContent = inspection.isExpanded ? '- Скрыть повторные осмотры' : '+ Показать повторные осмотры';
