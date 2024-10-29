@@ -51,12 +51,12 @@ document.addEventListener('DOMContentLoaded', function () {
         return urlParams.has(param) ? urlParams.get(param) : defaultValue;
     }
 
-    // Обновление URL без перезагрузки страницы
     function updateURL(params) {
-        params.id = patientId;
+        params.id = patientId; // Добавляем ID пациента к параметрам
         const urlParams = new URLSearchParams(params);
-        window.history.pushState(null, '', `${window.location.pathname}?${urlParams.toString()}`);
+        window.history.pushState(null, '', `/patient?${urlParams.toString()}`); // Меняем путь на "/patient"
     }
+    
 
     // Очистка параметров URL от пустых значений
     function cleanParams(params) {
@@ -149,6 +149,12 @@ document.addEventListener('DOMContentLoaded', function () {
         container.appendChild(rightColumn);
         inspectionsList.appendChild(container);
     }
+    window.addEventListener('popstate', function(event) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const patientId = urlParams.get('id');
+        // Обновляем данные на странице в зависимости от новых параметров
+        loadPatientInfo(patientId);  // например, загружаем информацию о пациенте
+    });
     
     
 // Изменённая функция для добавления осмотра с поддержкой уровня вложенности

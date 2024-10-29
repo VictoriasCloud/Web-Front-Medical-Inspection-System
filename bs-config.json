@@ -1,0 +1,14 @@
+{
+    "server": {
+      "baseDir": "./",
+      "middleware": {
+        "1": null  
+      },
+      "routes": {
+        "/patient": "card.html",
+        "/": "index.html"
+      },
+      "fallback": "index.html"
+    }
+  }
+  
