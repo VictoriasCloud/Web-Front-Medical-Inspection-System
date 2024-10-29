@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const urlParams = new URLSearchParams(window.location.search);
     const patientId = urlParams.get('id');
     let inspectionsData = []; // Хранение данных осмотров
-    let filterGrouped = true; // По умолчанию выбрано "Сгруппировать по повторным"
+    let filterGrouped = getQueryParam('grouped', 'true') === 'true';  // По умолчанию выбрано "Сгруппировать по повторным"
     const icd10Container = document.getElementById('icd10-container');
 
     function loadIcd10Options() {
@@ -34,6 +34,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 checkboxWrapper.appendChild(checkbox);
                 checkboxWrapper.appendChild(label);
                 icd10Container.appendChild(checkboxWrapper);
+            });
+            // После загрузки, отмечаем чекбоксы, если icdRoots передан в URL
+            const selectedICD10 = getQueryParam('icdRoots', '').split(',');
+            selectedICD10.forEach(icdRoot => {
+                const checkbox = document.getElementById(icdRoot);
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
             });
         })
         .catch(error => console.error('Ошибка загрузки диагнозов МКБ-10:', error));
@@ -85,9 +93,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function loadInspections(page = 1) {
-        const pageSize = document.getElementById('pageSize').value || 5;
-        const selectedICD10 = getSelectedIcd10(); // Получаем выбранные значения с чекбоксов
-        const grouped = filterGrouped;
+        const pageSize = getQueryParam('size', document.getElementById('pageSize').value || 5); // Берем size из URL или элемента
+        const grouped = getQueryParam('grouped', 'true') === 'true'; // Берем grouped из URL или по умолчанию true
+        const selectedICD10 = getQueryParam('icdRoots', '').split(',').filter(icdRoot => icdRoot); // Берем icdRoots из URL
+
         
         // Создаем URLSearchParams
         let params = new URLSearchParams({ 
