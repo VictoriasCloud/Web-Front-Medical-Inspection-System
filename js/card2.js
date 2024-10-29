@@ -4,10 +4,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const urlParams = new URLSearchParams(window.location.search);
     const patientId = urlParams.get('id');
     let inspectionsData = []; // Хранение данных осмотров
-    //let filterGrouped = true; // По умолчанию выбрано "Сгруппировать по повторным"
+    let filterGrouped = true; // По умолчанию выбрано "Сгруппировать по повторным"
     const icd10Container = document.getElementById('icd10-container');
-    let filterGrouped = getQueryParam('grouped', 'true') === 'true'; // Получаем значение фильтрации из URL или по умолчанию
-
 
     function loadIcd10Options() {
         fetch(`${apiBaseUrl}/api/dictionary/icd10/roots`, {
@@ -18,8 +16,6 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(response => response.json())
         .then(data => {
-            const icd10Container = document.getElementById('icd10-container');
-            icd10Container.innerHTML = ''; // Очищаем контейнер перед добавлением данных
             data.forEach(item => {
                 const checkboxWrapper = document.createElement('div');
                 checkboxWrapper.className = 'form-check';
@@ -55,12 +51,14 @@ document.addEventListener('DOMContentLoaded', function () {
         return urlParams.has(param) ? urlParams.get(param) : defaultValue;
     }
 
+    // Обновление URL без перезагрузки страницы
     function updateURL(params) {
         params.id = patientId;
-        delete params.id; // Убираем ID из query параметров
         const urlParams = new URLSearchParams(params);
-        window.history.pushState(null, '', `/patient/${patientId}?${urlParams.toString()}`);
+        window.history.pushState(null, '', `${window.location.pathname}?${urlParams.toString()}`);
     }
+
+    // Очистка параметров URL от пустых значений
     function cleanParams(params) {
         Object.keys(params).forEach(key => {
             if (!params[key]) {
