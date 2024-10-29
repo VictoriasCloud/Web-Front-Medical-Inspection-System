@@ -1,13 +1,14 @@
+//здесь мог бы быть рекурсивный запрос цепочки.
+
+
 document.addEventListener('DOMContentLoaded', function () {
     const authToken = localStorage.getItem('authToken');
     const apiBaseUrl = 'https://mis-api.kreosoft.space';
     const urlParams = new URLSearchParams(window.location.search);
     const patientId = urlParams.get('id');
     let inspectionsData = []; // Хранение данных осмотров
-    //let filterGrouped = true; // По умолчанию выбрано "Сгруппировать по повторным"
+    let filterGrouped = true; // По умолчанию выбрано "Сгруппировать по повторным"
     const icd10Container = document.getElementById('icd10-container');
-    let filterGrouped = getQueryParam('grouped', 'true') === 'true'; // Получаем значение фильтрации из URL или по умолчанию
-
 
     function loadIcd10Options() {
         fetch(`${apiBaseUrl}/api/dictionary/icd10/roots`, {
@@ -18,8 +19,6 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(response => response.json())
         .then(data => {
-            const icd10Container = document.getElementById('icd10-container');
-            icd10Container.innerHTML = ''; // Очищаем контейнер перед добавлением данных
             data.forEach(item => {
                 const checkboxWrapper = document.createElement('div');
                 checkboxWrapper.className = 'form-check';
@@ -55,12 +54,14 @@ document.addEventListener('DOMContentLoaded', function () {
         return urlParams.has(param) ? urlParams.get(param) : defaultValue;
     }
 
+    // Обновление URL без перезагрузки страницы
     function updateURL(params) {
         params.id = patientId;
-        delete params.id; // Убираем ID из query параметров
         const urlParams = new URLSearchParams(params);
-        window.history.pushState(null, '', `/patient/${patientId}?${urlParams.toString()}`);
+        window.history.pushState(null, '', `${window.location.pathname}?${urlParams.toString()}`);
     }
+
+    // Очистка параметров URL от пустых значений
     function cleanParams(params) {
         Object.keys(params).forEach(key => {
             if (!params[key]) {
@@ -100,8 +101,6 @@ document.addEventListener('DOMContentLoaded', function () {
         
         // Добавляем каждый выбранный icdRoot как отдельный параметр
         selectedICD10.forEach(icdRoot => params.append('icdRoots', icdRoot));
-         // Обновляем URL перед отправкой запроса
-    updateURL(Object.fromEntries(params.entries()));
     
         fetch(`${apiBaseUrl}/api/patient/${patientId}/inspections?${params.toString()}`, {
             headers: {
@@ -121,82 +120,77 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderInspections() {
         const inspectionsList = document.getElementById('inspectionsList');
         inspectionsList.innerHTML = ''; // Очищаем список перед добавлением новых осмотров
-    
-        // Создаем контейнер и два столбца для осмотров
-        const container = document.createElement('div');
-        container.className = 'row'; // Контейнер Bootstrap для двух колонок
-    
-        const leftColumn = document.createElement('div');
-        const rightColumn = document.createElement('div');
-        leftColumn.className = 'col-12 col-md-6'; // Полная ширина на узких экранах, 50% на широких
-        rightColumn.className = 'col-12 col-md-6';
-    
-        const half = Math.ceil(inspectionsData.length / 2);
-        let currentColumn = leftColumn; // Текущая колонка для распределения
-    
-        // Заполняем оба столбца с осмотрами
+        
+        // Все корневые осмотры рендерим с начальным отступом 0
         inspectionsData.forEach((inspection, index) => {
             const col = document.createElement('div');
-            col.className = 'inspection-cell mb-4'; // Класс для отступов и фиксированного размера ячеек
+            col.className = 'inspection-cell mb-4';
             
-            // Выбираем колонку для осмотра
-            if (index >= half) {
-                currentColumn = rightColumn;
-            }
-    
-            renderInspection(col, inspection, currentColumn);
+            // Начальный уровень вложенности равен 0 для корневых осмотров
+            renderInspection(col, inspection, inspectionsList, 0);
         });
-    
-        container.appendChild(leftColumn);
-        container.appendChild(rightColumn);
-        inspectionsList.appendChild(container);
     }
     
+    function renderInspection(cell, inspection, columnContainer, level = 0) {
+        const inspectionBlock = document.createElement('div');
+        inspectionBlock.className = 'inspection-block d-flex flex-column justify-content-between h-100 p-3 bg-light border rounded';
+        inspectionBlock.setAttribute('data-id', inspection.id);
     
-// Изменённая функция для добавления осмотра с поддержкой уровня вложенности
-function renderInspection(cell, inspection, columnContainer, level = 0) {
-    const inspectionBlock = document.createElement('div');
-    inspectionBlock.className = 'inspection-block d-flex flex-column justify-content-between h-100 p-3 bg-light border rounded';
-    inspectionBlock.setAttribute('data-id', inspection.id); // Устанавливаем идентификатор для проверки
-
-    // Устанавливаем отступ слева на основе уровня вложенности
-    inspectionBlock.style.marginLeft = `${level * 30}px`;
-
-    inspectionBlock.innerHTML = `
-        <div>
-            <h5>${new Date(inspection.date).toLocaleDateString()} - ${inspection.conclusion || 'Не указано'}</h5>
-            <p><strong>Основной диагноз:</strong> ${inspection.diagnosis ? inspection.diagnosis.code + ' - ' + inspection.diagnosis.name : 'Не указано'}</p>
-            <p><strong>Медицинский работник:</strong> ${inspection.doctor || 'Не указано'}</p>
-            <p><strong>Заключение:</strong> ${inspection.conclusion || 'Не указано'}</p>
-        </div>
-        <div>
-            <a href="#" class="btn btn-primary mt-auto">Детали осмотра</a>
-        </div>`;
-        // Добавляем кнопку для раскрытия дочерних осмотров только для корневых элементов (level === 0)
-         // И только если фильтрация установлена на 'Сгруппировать по повторным' (filterGrouped)
-
-        if (level === 0 && filterGrouped && ((inspection.hasChain) || inspection.hasNested)) {
+        // Устанавливаем отступ на основе уровня вложенности
+        inspectionBlock.style.marginLeft = `${level * 30}px`;
+    
+        inspectionBlock.innerHTML = `
+            <div>
+                <h5>${new Date(inspection.date).toLocaleDateString()} - ${inspection.conclusion || 'Не указано'}</h5>
+                <p><strong>Основной диагноз:</strong> ${inspection.diagnosis ? inspection.diagnosis.code + ' - ' + inspection.diagnosis.name : 'Не указано'}</p>
+                <p><strong>Медицинский работник:</strong> ${inspection.doctor || 'Не указано'}</p>
+                <p><strong>Заключение:</strong> ${inspection.conclusion || 'Не указано'}</p>
+            </div>
+            <div>
+                <a href="#" class="btn btn-primary mt-auto">Детали осмотра</a>
+            </div>`;
+    
+        // Добавляем кнопку для раскрытия повторных осмотров, если они есть
+        if (inspection.hasChain || inspection.hasNested) {
             const chainButton = document.createElement('button');
             chainButton.className = 'btn btn-link';
             chainButton.textContent = inspection.isExpanded ? '- Скрыть повторные осмотры' : '+ Показать повторные осмотры';
             chainButton.addEventListener('click', () => {
-                toggleChildInspections(inspection, cell, chainButton, columnContainer, level + 1); // Увеличиваем уровень вложенности
+                toggleChildInspections(inspection, cell, chainButton, columnContainer, level + 1); // Увеличиваем уровень вложенности для дочерних элементов
             });
-            inspectionBlock.querySelector('div').appendChild(chainButton);
+            inspectionBlock.appendChild(chainButton);
         }
     
-    cell.appendChild(inspectionBlock);
-    columnContainer.appendChild(cell);
-}
-
-// Переключение отображения дочерних осмотров с учётом уровня вложенности
-function toggleChildInspections(inspection, parentCell, chainButton, columnContainer, level) {
-    if (inspection.isExpanded) {
-        hideChildInspections(inspection, chainButton, columnContainer);
-    } else {
-        loadChildInspections(inspection, parentCell, chainButton, columnContainer, level);
+        cell.appendChild(inspectionBlock);
+        columnContainer.appendChild(cell);
     }
-}
+    
+    function addChildInspections(parentInspection, childInspections, parentCell, columnContainer, level) {
+        let insertAfter = parentCell.nextSibling;
+    
+        // Обрабатываем каждый дочерний осмотр с увеличенным уровнем
+        childInspections.forEach((child, index) => {
+            const childCell = document.createElement('div');
+            childCell.className = 'inspection-cell mb-4 child-inspection';
+            childCell.setAttribute('data-parent-id', parentInspection.id);
+    
+            // Увеличиваем отступ для дочерних осмотров на основе их индекса
+            renderInspection(childCell, child, columnContainer, level + (index + 1));  // Увеличиваем level для каждого дочернего элемента
+            
+            columnContainer.insertBefore(childCell, insertAfter); // Вставляем дочерние осмотры сразу под родителем
+        });
+    }
+    
+    
+    function toggleChildInspections(inspection, parentCell, chainButton, columnContainer, level) {
+        if (inspection.isExpanded) {
+            hideChildInspections(inspection, chainButton, columnContainer);
+        } else {
+            // При загрузке дочерних осмотров передаем текущий уровень вложенности + 1
+            loadChildInspections(inspection, parentCell, chainButton, columnContainer, level + 1);
+        }
+    }
+    
 
 // Загрузка дочерних осмотров с учётом уровня вложенности
 function loadChildInspections(inspection, parentCell, chainButton, columnContainer, level) {
@@ -215,23 +209,19 @@ function loadChildInspections(inspection, parentCell, chainButton, columnContain
     .catch(error => console.error('Ошибка загрузки повторных осмотров:', error));
 }
 
-function addChildInspections(parentInspection, childInspections, parentCell, columnContainer, level) {
-    let insertAfter = parentCell.nextSibling;
+// // Добавление дочерних осмотров с учётом уровня вложенности
+// function addChildInspections(parentInspection, childInspections, parentCell, columnContainer, level) {
+//     let insertAfter = parentCell.nextSibling;
 
-    // Обрабатываем каждый дочерний осмотр с увеличенным уровнем
-    childInspections.forEach((child, index) => {
-        const childCell = document.createElement('div');
-        childCell.className = 'inspection-cell mb-4 child-inspection';
-        childCell.setAttribute('data-parent-id', parentInspection.id);
+//     childInspections.forEach(child => {
+//         const childCell = document.createElement('div');
+//         childCell.className = 'inspection-cell mb-4 child-inspection';
+//         childCell.setAttribute('data-parent-id', parentInspection.id); // Устанавливаем родительский ID
+//         renderInspection(childCell, child, columnContainer, level); // Передаём уровень вложенности
 
-        // Увеличиваем отступ для дочерних осмотров на основе их индекса
-        renderInspection(childCell, child, columnContainer, level + (index));  // Увеличиваем level для каждого дочернего элемента
-        
-        columnContainer.insertBefore(childCell, insertAfter); // Вставляем дочерние осмотры сразу под родителем
-    });
-}
-
-
+//         columnContainer.insertBefore(childCell, insertAfter); // Вставляем дочерние осмотры сразу под родителем
+//     });
+// }
 // Редирект на страницу создания осмотра (createCard.html) при нажатии на кнопку "Добавить осмотр"
 document.getElementById('addInspectionBtn').addEventListener('click', function() {
     const patientId = new URLSearchParams(window.location.search).get('id'); // Получаем ID пациента из URL (если есть)
@@ -259,7 +249,7 @@ const style = document.createElement('style');
 style.innerHTML = `
     .inspection-cell {
         width: 100%;
-        height: 300px; /* Фиксированная высота для каждой ячейки */
+        height: 400px; /* Фиксированная высота для каждой ячейки */
         display: flex;
         flex-direction: column;
     }
