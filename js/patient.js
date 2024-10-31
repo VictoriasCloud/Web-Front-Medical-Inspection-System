@@ -1,4 +1,14 @@
 document.addEventListener('DOMContentLoaded', function () {
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const patientId = urlParams.get('id');
+
+    // Проверка, есть ли `id` в URL. Если да — переходим на `card.html`
+    if (patientId) {
+        window.location.href = `/card.html?id=${patientId}&${urlParams.toString()}`;
+        return;  // Останавливаем выполнение, чтобы не загружать список пациентов
+    }
+
     const searchBtn = document.getElementById('searchPatients');
     const sortBySelect = document.getElementById('sortBy');
     const pageSizeInput = document.getElementById('pageSize');
@@ -39,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Загрузка пациентов с поддержкой фильтров и пагинации
     function loadPatients(page = 1) {
-        const pageSize = pageSizeInput.value || 5;
+        const pageSize = getQueryParam('size', pageSizeInput.value || 5);
         const sortBy = sortBySelect.value || '';
         const name = document.getElementById('searchName').value;
         const conclusions = document.getElementById('conclusions').value;
@@ -76,16 +86,21 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .catch(error => console.error('Ошибка загрузки пациентов:', error));
     }
+        // Установка значения размера страницы из URL при загрузке
+    function setPageSizeFromURL() {
+        const sizeFromURL = getQueryParam('size', 5);
+        pageSizeInput.value = sizeFromURL;
+    }
 
     // Отображение списка пациентов
-    function displayPatients(patients) {
+    function displayPatients(patient) {
         const patientsList = document.getElementById('patientsList');
         patientsList.innerHTML = '';
 
         const row = document.createElement('div');
         row.className = 'row';
 
-        patients.forEach(patient => {
+        patient.forEach(patient => {
             const col = document.createElement('div');
             col.className = 'col-md-6 mb-4';
 
@@ -145,6 +160,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Загружаем пациентов при загрузке страницы
     loadPatients(parseInt(getQueryParam('page', 1)));
+
+    pageSizeInput.addEventListener('change', () => loadPatients());
+
+    window.addEventListener('popstate', function() {
+        // Извлечение параметров из URL и перезагрузка пациентов
+        setPageSizeFromURL();
+        loadPatients(parseInt(getQueryParam('page', 1)));
+    });
+    setPageSizeFromURL();
+    
+
 
     // Регистрация нового пациента
     document.getElementById('patientForm').addEventListener('submit', function (event) {

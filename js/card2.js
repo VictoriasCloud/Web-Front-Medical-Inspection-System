@@ -4,8 +4,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const urlParams = new URLSearchParams(window.location.search);
     const patientId = urlParams.get('id');
     let inspectionsData = []; // Хранение данных осмотров
-    let filterGrouped = getQueryParam('grouped', 'true') === 'true';  // По умолчанию выбрано "Сгруппировать по повторным"
+    let filterGrouped = urlParams.get('grouped') !== 'false';  // По умолчанию выбрано "Сгруппировать по повторным"
+
     const icd10Container = document.getElementById('icd10-container');
+
+    document.getElementById('groupedOption').checked = filterGrouped;
+
 
     function loadIcd10Options() {
         fetch(`${apiBaseUrl}/api/dictionary/icd10/roots`, {
@@ -64,52 +68,56 @@ document.addEventListener('DOMContentLoaded', function () {
         const urlParams = new URLSearchParams(params);
         window.history.pushState(null, '', `/patient?${urlParams.toString()}`); // Меняем путь на "/patient"
     }
-    
 
-    // Очистка параметров URL от пустых значений
-    function cleanParams(params) {
-        Object.keys(params).forEach(key => {
-            if (!params[key]) {
-                delete params[key];
-            }
-        });
-        return params;
+    function synchronizePageSize() {
+        const urlPageSize = getQueryParam('size', 5); // Получаем `size` из URL или 5 по умолчанию
+        document.getElementById('pageSize').value = urlPageSize; // Устанавливаем `pageSize` в элемент выбора
     }
 
-    // Загрузка данных пациента
-    function loadPatientInfo() {
-        fetch(`${apiBaseUrl}/api/patient/${patientId}`, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('patientName').textContent = `${data.name}`;
-            document.getElementById('patientDob').textContent = `Дата рождения: ${new Date(data.birthday).toLocaleDateString()}`;
-        })
-        .catch(error => console.error('Ошибка загрузки данных пациента:', error));
+    function updateFiltersAndReload() {
+        const selectedIcd10Ids = getSelectedIcd10();
+        const pageSize = document.getElementById('pageSize').value;
+        const grouped = filterGrouped ? 'true' : 'false';
+
+        // Формируем параметры для обновления URL и запроса
+        const params = {
+            grouped: grouped,
+            size: pageSize,
+            icdRoots: selectedIcd10Ids.join(',')
+        };
+
+        // Обновляем URL с новыми параметрами
+        updateURL(params);
+        loadInspections(); // Перезагружаем осмотры
     }
+
+    document.getElementById('pageSize').addEventListener('change', updateFiltersAndReload);
+    document.getElementById('filterBtn').addEventListener('click', function(event) {
+        event.preventDefault();
+        updateFiltersAndReload();
+    });
 
     function loadInspections(page = 1) {
-        const pageSize = getQueryParam('size', document.getElementById('pageSize').value || 5); // Берем size из URL или элемента
-        const grouped = getQueryParam('grouped', 'true') === 'true'; // Берем grouped из URL или по умолчанию true
-        const selectedICD10 = getQueryParam('icdRoots', '').split(',').filter(icdRoot => icdRoot); // Берем icdRoots из URL
+        // Показ временного индикатора загрузки
+        synchronizePageSize();
+        const inspectionsList = document.getElementById('inspectionsList');
+        inspectionsList.innerHTML = '<p>Загрузка...</p>';
 
-        
-        // Создаем URLSearchParams
-        let params = new URLSearchParams({ 
-            page, 
-            size: pageSize, 
-            grouped: grouped.toString() 
+        const pageSize = getQueryParam('size', document.getElementById('pageSize').value || 5);
+        const grouped = filterGrouped ? 'true' : 'false';
+        const selectedICD10 = getSelectedIcd10();
+
+        // Формируем параметры запроса
+        const params = new URLSearchParams({
+            page,
+            size: pageSize,
+            grouped: grouped
         });
-        
-        // Добавляем каждый выбранный icdRoot как отдельный параметр
+
         selectedICD10.forEach(icdRoot => params.append('icdRoots', icdRoot));
-         // Обновляем URL перед отправкой запроса
-    updateURL(Object.fromEntries(params.entries()));
-    
+
+        updateURL(Object.fromEntries(params.entries()));  // Обновляем URL
+
         fetch(`${apiBaseUrl}/api/patient/${patientId}/inspections?${params.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`,
@@ -119,10 +127,13 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(response => response.json())
         .then(data => {
             inspectionsData = data.inspections;
-            renderInspections();  // Отрисовка осмотров
-            setupPagination(data.pagination);  // Пагинация
+            renderInspections(); // Отрисовываем данные после загрузки
+            setupPagination(data.pagination); // Настраиваем пагинацию
         })
-        .catch(error => console.error('Ошибка загрузки осмотров:', error));
+        .catch(error => {
+            console.error('Ошибка загрузки осмотров:', error);
+            inspectionsList.innerHTML = '<p>Не удалось загрузить данные. Попробуйте еще раз.</p>';
+        });
     }
 
     function renderInspections() {
@@ -158,126 +169,152 @@ document.addEventListener('DOMContentLoaded', function () {
         container.appendChild(rightColumn);
         inspectionsList.appendChild(container);
     }
-    window.addEventListener('popstate', function(event) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const patientId = urlParams.get('id');
-        // Обновляем данные на странице в зависимости от новых параметров
-        loadPatientInfo(patientId);  // например, загружаем информацию о пациенте
-    });
     
     
-// Изменённая функция для добавления осмотра с поддержкой уровня вложенности
-function renderInspection(cell, inspection, columnContainer, level = 0) {
-    const inspectionBlock = document.createElement('div');
-    inspectionBlock.className = 'inspection-block d-flex flex-column justify-content-between h-100 p-3 bg-light border rounded';
-    inspectionBlock.setAttribute('data-id', inspection.id); // Устанавливаем идентификатор для проверки
-
-    // Устанавливаем отступ слева на основе уровня вложенности
-    inspectionBlock.style.marginLeft = `${level * 30}px`;
-
-    inspectionBlock.innerHTML = `
-        <div>
-            <h5>${new Date(inspection.date).toLocaleDateString()} - ${inspection.conclusion || 'Не указано'}</h5>
-            <p><strong>Основной диагноз:</strong> ${inspection.diagnosis ? inspection.diagnosis.code + ' - ' + inspection.diagnosis.name : 'Не указано'}</p>
-            <p><strong>Медицинский работник:</strong> ${inspection.doctor || 'Не указано'}</p>
-            <p><strong>Заключение:</strong> ${inspection.conclusion || 'Не указано'}</p>
-        </div>
-        <div>
-            <a href="#" class="btn btn-primary mt-auto">Детали осмотра</a>
-        </div>`;
-        // Добавляем кнопку для раскрытия дочерних осмотров только для корневых элементов (level === 0)
-         // И только если фильтрация установлена на 'Сгруппировать по повторным' (filterGrouped)
-
-        if (level === 0 && filterGrouped && ((inspection.hasChain) || inspection.hasNested)) {
-            const chainButton = document.createElement('button');
-            chainButton.className = 'btn btn-link';
-            chainButton.textContent = inspection.isExpanded ? '- Скрыть повторные осмотры' : '+ Показать повторные осмотры';
-            chainButton.addEventListener('click', () => {
-                toggleChildInspections(inspection, cell, chainButton, columnContainer, level + 1); // Увеличиваем уровень вложенности
-            });
-            inspectionBlock.querySelector('div').appendChild(chainButton);
-        }
-    
-    cell.appendChild(inspectionBlock);
-    columnContainer.appendChild(cell);
-}
-
-// Переключение отображения дочерних осмотров с учётом уровня вложенности
-function toggleChildInspections(inspection, parentCell, chainButton, columnContainer, level) {
-    if (inspection.isExpanded) {
-        hideChildInspections(inspection, chainButton, columnContainer);
-    } else {
-        loadChildInspections(inspection, parentCell, chainButton, columnContainer, level);
-    }
-}
-
-// Загрузка дочерних осмотров с учётом уровня вложенности
-function loadChildInspections(inspection, parentCell, chainButton, columnContainer, level) {
-    fetch(`${apiBaseUrl}/api/inspection/${inspection.id}/chain`, {
-        headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(childInspections => {
-        addChildInspections(inspection, childInspections, parentCell, columnContainer, level);
-        inspection.isExpanded = true;
-        chainButton.textContent = '- Скрыть повторные осмотры';
-    })
-    .catch(error => console.error('Ошибка загрузки повторных осмотров:', error));
-}
-
-function addChildInspections(parentInspection, childInspections, parentCell, columnContainer, level) {
-    let insertAfter = parentCell.nextSibling;
-
-    // Обрабатываем каждый дочерний осмотр с увеличенным уровнем
-    childInspections.forEach((child, index) => {
-        const childCell = document.createElement('div');
-        childCell.className = 'inspection-cell mb-4 child-inspection';
-        childCell.setAttribute('data-parent-id', parentInspection.id);
-
-        // Увеличиваем отступ для дочерних осмотров на основе их индекса
-        renderInspection(childCell, child, columnContainer, level + (index));  // Увеличиваем level для каждого дочернего элемента
+    function renderInspection(cell, inspection, columnContainer, level = 0) {
+            const inspectionBlock = document.createElement('div');
+            inspectionBlock.className = 'inspection-block d-flex flex-column justify-content-between h-100 p-3 bg-light border rounded';
+            inspectionBlock.setAttribute('data-id', inspection.id); // Устанавливаем идентификатор для проверки
         
-        columnContainer.insertBefore(childCell, insertAfter); // Вставляем дочерние осмотры сразу под родителем
-    });
-}
-
-
-// Редирект на страницу создания осмотра (createCard.html) при нажатии на кнопку "Добавить осмотр"
-document.getElementById('addInspectionBtn').addEventListener('click', function() {
-    const patientId = new URLSearchParams(window.location.search).get('id'); // Получаем ID пациента из URL (если есть)
-    if (patientId) {
-        window.location.href = `createCard.html?id=${patientId}`;
-    } else {
-        // Если ID пациента нет, просто переходим на createCard.html
-        window.location.href = 'createCard.html';
+            // Устанавливаем отступ слева на основе уровня вложенности
+            inspectionBlock.style.marginLeft = `${level * 30}px`;
+        
+            // Внутренний блок для вывода информации об осмотре
+            inspectionBlock.innerHTML = `
+                <div>
+                    <h5>${new Date(inspection.date).toLocaleDateString()} - ${inspection.conclusion || 'Не указано'}</h5>
+                    <p><strong>Основной диагноз:</strong> ${inspection.diagnosis ? inspection.diagnosis.code + ' - ' + inspection.diagnosis.name : 'Не указано'}</p>
+                    <p><strong>Медицинский работник:</strong> ${inspection.doctor || 'Не указано'}</p>
+                    <p><strong>Заключение:</strong> ${inspection.conclusion || 'Не указано'}</p>
+                </div>`;
+        
+            // Создаем блок для кнопок, чтобы расположить их в строку
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'd-flex justify-content-start mt-auto'; // Flexbox для выравнивания кнопок в строку
+        
+            // Кнопка "Детали осмотра"
+            const detailsButton = document.createElement('a');
+            detailsButton.href = '#'; // Здесь может быть ссылка на детали осмотра
+            detailsButton.className = 'btn btn-primary me-2'; // Кнопка с отступом справа
+            detailsButton.textContent = 'Детали осмотра';
+    
+            // Добавляем кнопку "Детали осмотра" в контейнер кнопок
+            buttonContainer.appendChild(detailsButton);
+        
+            // Если у осмотра нет дочерних осмотров (hasNested = false), добавляем кнопку "Добавить осмотр"
+            if (!inspection.hasNested) {
+                const addButton = document.createElement('button');
+                addButton.className = 'btn btn-outline-primary'; // Кнопка с белым фоном и синей обводкой
+                addButton.textContent = 'Добавить осмотр';
+                addButton.textContent = 'Добавить осмотр';
+        
+                // Обработчик для кнопки "Добавить осмотр"
+                addButton.addEventListener('click', function () {
+                    // Логика добавления нового осмотра (открываем новую вкладку)
+                    window.open(`createCard.html?parentInspectionId=${inspection.id}&id=${patientId}`, '_blank');
+                });
+        
+                // Добавляем кнопку "Добавить осмотр" справа от кнопки "Детали осмотра"
+                buttonContainer.appendChild(addButton);
+            }
+    
+            // Добавляем кнопку для раскрытия дочерних осмотров только для корневых элементов (level === 0)
+            // И только если фильтрация установлена на 'Сгруппировать по повторным'
+            if (level === 0 && filterGrouped && (inspection.hasChain || inspection.hasNested)) {
+                const chainButton = document.createElement('button');
+                chainButton.className = 'btn btn-link'; // Кнопка с текстом
+                chainButton.textContent = inspection.isExpanded ? '- Скрыть повторные осмотры' : '+ Показать повторные осмотры';
+                chainButton.addEventListener('click', () => {
+                    toggleChildInspections(inspection, cell, chainButton, columnContainer, level + 1); // Увеличиваем уровень вложенности
+                });
+        
+                // Добавляем кнопку "Показать повторные осмотры" под кнопками действий
+                buttonContainer.appendChild(chainButton);
+            }
+        
+            // Добавляем контейнер с кнопками в блок осмотра
+            inspectionBlock.appendChild(buttonContainer);
+        
+            // Вставляем блок осмотра в текущую колонку
+            cell.appendChild(inspectionBlock);
+            columnContainer.appendChild(cell);
+        }
+    
+    // Переключение отображения дочерних осмотров с учётом уровня вложенности
+    function toggleChildInspections(inspection, parentCell, chainButton, columnContainer, level) {
+        if (inspection.isExpanded) {
+            hideChildInspections(inspection, chainButton, columnContainer);
+        } else {
+            loadChildInspections(inspection, parentCell, chainButton, columnContainer, level);
+        }
     }
-});
+
+    // Загрузка дочерних осмотров с учётом уровня вложенности
+    function loadChildInspections(inspection, parentCell, chainButton, columnContainer, level) {
+        fetch(`${apiBaseUrl}/api/inspection/${inspection.id}/chain`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(childInspections => {
+            addChildInspections(inspection, childInspections, parentCell, columnContainer, level);
+            inspection.isExpanded = true;
+            chainButton.textContent = '- Скрыть повторные осмотры';
+        })
+        .catch(error => console.error('Ошибка загрузки повторных осмотров:', error));
+    }
+
+    function addChildInspections(parentInspection, childInspections, parentCell, columnContainer, level) {
+        let insertAfter = parentCell.nextSibling;
+
+        // Обрабатываем каждый дочерний осмотр с увеличенным уровнем
+        childInspections.forEach((child, index) => {
+            const childCell = document.createElement('div');
+            childCell.className = 'inspection-cell mb-4 child-inspection';
+            childCell.setAttribute('data-parent-id', parentInspection.id);
+
+            // Увеличиваем отступ для дочерних осмотров на основе их индекса
+            renderInspection(childCell, child, columnContainer, level + (index));  // Увеличиваем level для каждого дочернего элемента
+            
+            columnContainer.insertBefore(childCell, insertAfter); // Вставляем дочерние осмотры сразу под родителем
+        });
+    }
 
 
-// Скрытие дочерних осмотров
-function hideChildInspections(inspection, chainButton, columnContainer) {
-    // Находим все дочерние элементы с атрибутом data-parent-id равным id родителя
-    const childCells = columnContainer.querySelectorAll(`[data-parent-id="${inspection.id}"]`);
-    childCells.forEach(child => child.remove()); // Удаляем все дочерние элементы
-    inspection.isExpanded = false;
-    chainButton.textContent = '+ Показать повторные осмотры';
-}
+    // Редирект на страницу создания осмотра (createCard.html) при нажатии на кнопку "Добавить осмотр"
+    document.getElementById('addInspectionBtn').addEventListener('click', function() {
+        const patientId = new URLSearchParams(window.location.search).get('id'); // Получаем ID пациента из URL (если есть)
+        if (patientId) {
+            window.location.href = `createCard.html?id=${patientId}`;
+        } else {
+            // Если ID пациента нет, просто переходим на createCard.html
+            window.location.href = 'createCard.html';
+        }
+    });
+
+    // Скрытие дочерних осмотров
+    function hideChildInspections(inspection, chainButton, columnContainer) {
+        // Находим все дочерние элементы с атрибутом data-parent-id равным id родителя
+        const childCells = columnContainer.querySelectorAll(`[data-parent-id="${inspection.id}"]`);
+        childCells.forEach(child => child.remove()); // Удаляем все дочерние элементы
+        inspection.isExpanded = false;
+        chainButton.textContent = '+ Показать повторные осмотры';
+    }
 
     
-// CSS для фиксированной высоты и ширины ячеек
-const style = document.createElement('style');
-style.innerHTML = `
-    .inspection-cell {
-        width: 100%;
-        height: 300px; /* Фиксированная высота для каждой ячейки */
-        display: flex;
-        flex-direction: column;
-    }
-`;
-document.head.appendChild(style);
+    // CSS для фиксированной высоты и ширины ячеек
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .inspection-cell {
+            width: 100%;
+            height: 350px; /* Фиксированная высота для каждой ячейки */
+            display: flex;
+            flex-direction: column;
+        }
+    `;
+    document.head.appendChild(style);
 
     // Функция для настройки фильтров
     function setupFilters() {
@@ -299,7 +336,6 @@ document.head.appendChild(style);
 
         const totalPages = pagination.count;
         const currentPage = pagination.current;
-        const pageSize = getQueryParam('pageSize', 5);
 
         if (currentPage > 1) {
             const prevPageItem = document.createElement('li');
@@ -342,11 +378,11 @@ document.head.appendChild(style);
         console.log('Выбранные диагнозы МКБ-10:', selectedIcd10Ids);
 
         // Далее используем selectedIcd10Ids для выполнения фильтрации осмотров
-        loadInspections(1, selectedIcd10Ids); // Передаем выбранные диагнозы в функцию загрузки осмотров
+        loadInspections();// Передаем выбранные диагнозы в функцию загрузки осмотров
     });
 
-    loadIcd10Options();
-    setupFilters();
-    loadPatientInfo();
+    
+    setupFilters(); 
     loadInspections(getQueryParam('page', 1));
+    loadIcd10Options();
 });

@@ -5,8 +5,12 @@
         "1": null  
       },
       "routes": {
-        "/patient": "card.html",
-        "/": "index.html"
+        "/": "index.html",
+        "/profile": "profile.html",
+        "/patient": "patient.html",
+        "/registration": "/registration.html",        
+        "/createCard": "/createCard.html",
+        "/login": "/login.html"
       },
       "fallback": "index.html"
     }
