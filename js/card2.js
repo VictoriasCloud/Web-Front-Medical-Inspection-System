@@ -8,7 +8,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const icd10Container = document.getElementById('icd10-container');
 
-    document.getElementById('groupedOption').checked = filterGrouped;
+    // Функция для установки радиокнопок в зависимости от параметра URL
+    function setFilterOptions() {
+        const isGrouped = new URLSearchParams(window.location.search).get('grouped') === 'true';
+        document.getElementById('groupedOption').checked = isGrouped;
+        document.getElementById('allOption').checked = !isGrouped;
+    }
+
 
 
     function loadIcd10Options() {
@@ -67,6 +73,7 @@ document.addEventListener('DOMContentLoaded', function () {
         params.id = patientId; // Добавляем ID пациента к параметрам
         const urlParams = new URLSearchParams(params);
         window.history.pushState(null, '', `/patient?${urlParams.toString()}`); // Меняем путь на "/patient"
+        setFilterOptions();
     }
 
     function synchronizePageSize() {
@@ -381,7 +388,7 @@ document.addEventListener('DOMContentLoaded', function () {
         loadInspections();// Передаем выбранные диагнозы в функцию загрузки осмотров
     });
 
-    
+    setFilterOptions();  
     setupFilters(); 
     loadInspections(getQueryParam('page', 1));
     loadIcd10Options();
