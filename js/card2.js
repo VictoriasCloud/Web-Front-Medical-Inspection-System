@@ -160,14 +160,14 @@ document.addEventListener('DOMContentLoaded', function () {
             // Если у осмотра нет дочерних осмотров (hasNested = false), добавляем кнопку "Добавить осмотр"
             if (!inspection.hasNested) {
                 const addButton = document.createElement('button');
-                addButton.className = 'btn btn-outline-primary';
+                addButton.className = 'btn btn-outline-primary linked-inspection-button';
                 addButton.textContent = 'Добавить осмотр';
-                addButton.textContent = 'Добавить осмотр';
-        
+                addButton.setAttribute('data-linked', 'true'); // Устанавливаем атрибут для привязанных осмотров
+
                 // Обработчик для кнопки "Добавить осмотр"
                 addButton.addEventListener('click', function () {
                     // Логика добавления нового осмотра (открываем новую вкладку)
-                    window.open(`createCard.html?parentInspectionId=${inspection.id}&id=${patientId}`, '_blank');
+                    window.open(`createCard.html?previousInspectionId=${inspection.id}&id=${patientId}`, '_blank');
                 });
         
                 // Добавляем кнопку "Добавить осмотр" справа от кнопки "Детали осмотра"
@@ -239,16 +239,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 
-    // Редирект на страницу создания осмотра (createCard.html) при нажатии на кнопку "Добавить осмотр"
-    document.getElementById('addInspectionBtn').addEventListener('click', function() {
-        const patientId = new URLSearchParams(window.location.search).get('id'); // Получаем ID пациента из URL (если есть)
-        if (patientId) {
-            window.location.href = `createCard.html?id=${patientId}`;
-        } else {
-            // Если ID пациента нет, просто переходим на createCard.html
-            window.location.href = 'createCard.html';
-        }
-    });
+// Редирект на страницу создания осмотра (createCard.html) при нажатии на кнопку "Добавить осмотр" без привязки
+document.getElementById('addInspectionBtn').addEventListener('click', function() {
+    const patientId = new URLSearchParams(window.location.search).get('id');
+    window.location.href = `createCard.html?id=${patientId}&previousInspectionId=null`;
+});
 
     // Скрытие дочерних осмотров
     function hideChildInspections(inspection, chainButton, columnContainer) {

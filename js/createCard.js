@@ -5,6 +5,77 @@ document.addEventListener('DOMContentLoaded', function () {
     const patientId = urlParams.get('id');
     const diagnosisList = []; // Список добавленных диагнозов
     const consultationList = []; // Список добавленных консультаций
+    const previousInspectionId = urlParams.get('previousInspectionId');
+
+     // Устанавливаем значения переключателей и заполняем данные
+     const primaryInspectionRadio = document.getElementById('primaryInspection');
+     const secondaryInspectionRadio = document.getElementById('secondaryInspection');
+     const previousInspectionSelect = document.getElementById('previousInspectionSelect');
+
+
+     // Проверяем значение previousInspectionId
+    if (previousInspectionId === 'null') {
+        // Если previousInspectionId == null, устанавливаем "Первичный осмотр" по умолчанию
+        primaryInspectionRadio.checked = true;
+    } else {
+        // Если указан previousInspectionId, выбираем "Повторный осмотр"
+        secondaryInspectionRadio.checked = true;
+
+        // Загружаем данные предыдущего осмотра
+        fetch(`${apiBaseUrl}/api/patient/${patientId}/inspection/${previousInspectionId}`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Добавляем в селект информацию о предыдущем осмотре
+            const option = document.createElement('option');
+            option.value = data.id;
+            option.textContent = `${new Date(data.date).toLocaleDateString()} - ${data.diagnosis?.name || 'Диагноз неизвестен'}`;
+            previousInspectionSelect.appendChild(option);
+            previousInspectionSelect.value = data.id;
+        })
+        .catch(error => console.error('Ошибка загрузки предыдущего осмотра:', error));
+    }
+
+    // Обработчик для выбора типа осмотра
+    primaryInspectionRadio.addEventListener('change', function () {
+        if (primaryInspectionRadio.checked) {
+            previousInspectionSelect.disabled = true; // Отключаем выбор предыдущего осмотра
+        }
+    });
+
+    secondaryInspectionRadio.addEventListener('change', function () {
+        if (secondaryInspectionRadio.checked) {
+            previousInspectionSelect.disabled = false; // Включаем выбор предыдущего осмотра
+        }
+    });
+
+    // Заполняем выпадающий список предыдущих осмотров, если выбран "Повторный осмотр"
+    if (previousInspectionId === 'null' || secondaryInspectionRadio.checked) {
+        loadPreviousInspections();
+    }
+
+    function loadPreviousInspections() {
+        fetch(`${apiBaseUrl}/api/patient/${patientId}/inspections`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            data.inspections.forEach(inspection => {
+                const option = document.createElement('option');
+                option.value = inspection.id;
+                option.textContent = `${new Date(inspection.date).toLocaleDateString()} - ${inspection.diagnosis?.name || 'Диагноз неизвестен'}`;
+                previousInspectionSelect.appendChild(option);
+            });
+        })
+        .catch(error => console.error('Ошибка загрузки списка осмотров:', error));
+    }
 
     if (!authToken) {
         alert('Авторизация требуется для доступа к этой странице.');
@@ -12,29 +83,13 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
-    function loadPatientInfo() {
-        fetch(`${apiBaseUrl}/api/patient/${patientId}`, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.ok ? response.json() : Promise.reject('Ошибка авторизации'))
-        .then(data => {
-            document.getElementById('patientName').textContent = `${data.name}`;
-            document.getElementById('patientDob').textContent = `Дата рождения: ${new Date(data.birthday).toLocaleDateString()}`;
-        })
-        .catch(error => console.error('Ошибка загрузки данных пациента:', error));
-    }
-
-    loadPatientInfo();
+    loadPatientInfo(patientId, apiBaseUrl, authToken); 
+    const inspectionTypeRadios = document.getElementsByName('inspectionType');
 
     const diagnosisSearch = document.getElementById('diagnosisSearch');
     const diagnosisResults = document.getElementById('diagnosisResults');
     const diagnosisListContainer = document.getElementById('diagnosisList');
-
     const consultationSpecialty = document.getElementById('consultationSpecialty');
-    const consultationResults = document.getElementById('consultationResults');
     const consultationListContainer = document.getElementById('consultationList');
 
     // Сопоставление типов диагноза на русском и английском языках
@@ -178,38 +233,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Поиск специальностей для консультации
-    function fetchSpecialties(query = '') {
-        fetch(`${apiBaseUrl}/api/dictionary/speciality?name=${query}&page=1&size=18`, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            consultationResults.innerHTML = '';
-            consultationResults.style.display = 'block';
-
-            data.specialties.forEach(specialty => {
-                const item = document.createElement('a');
-                item.href = '#';
-                item.className = 'list-group-item list-group-item-action';
-                item.textContent = specialty.name;
-                item.dataset.id = specialty.id;
-
-                item.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    consultationSpecialty.value = specialty.name;
-                    consultationSpecialty.dataset.specialityId = specialty.id;
-                    consultationResults.style.display = 'none';
-                });
-
-                consultationResults.appendChild(item);
-            });
-        })
-        .catch(error => console.error('Ошибка загрузки специальностей:', error));
-    }
 
     function addConsultationToList(consultation) {
         const consultationItem = document.createElement('div');
@@ -282,12 +305,12 @@ document.addEventListener('DOMContentLoaded', function () {
     
 
     // Включение или отключение полей консультации
-        document.getElementById('needConsultation').addEventListener('change', function() {
+    document.getElementById('needConsultation').addEventListener('change', function() {
             const isChecked = this.checked;
             document.getElementById('consultationSpecialty').disabled = !isChecked;
             document.getElementById('consultationComment').disabled = !isChecked;
             document.getElementById('addConsultation').disabled = !isChecked;
-        });
+    });
 
     consultationSpecialty.addEventListener('focus', () => fetchSpecialties());
 
@@ -330,9 +353,11 @@ document.addEventListener('DOMContentLoaded', function () {
     setCurrentDateTime(); // Устанавливаем дату осмотра при загрузке страницы
 
     document.getElementById('saveInspection').addEventListener('click', function () {
-        const authToken = localStorage.getItem('authToken');
-        const apiBaseUrl = 'https://mis-api.kreosoft.space';
-        const patientId = new URLSearchParams(window.location.search).get('id');
+        const selectedInspectionType = Array.from(inspectionTypeRadios).find(radio => radio.checked)?.value;
+        if (!selectedInspectionType) {
+            alert('Выберите тип осмотра: первичный или повторный.');
+            return;
+        }
         const inspectionDate = document.getElementById('inspectionDate').value;
         const anamnesis = document.getElementById('anamnesis').value;
         const complaints = document.getElementById('complaints').value;
