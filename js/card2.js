@@ -6,61 +6,11 @@ document.addEventListener('DOMContentLoaded', function () {
     let inspectionsData = []; // Хранение данных осмотров
     let filterGrouped = urlParams.get('grouped') !== 'false';  // По умолчанию выбрано "Сгруппировать по повторным"
 
-    const icd10Container = document.getElementById('icd10-container');
-
     // Функция для установки радиокнопок в зависимости от параметра URL
     function setFilterOptions() {
         const isGrouped = new URLSearchParams(window.location.search).get('grouped') === 'true';
         document.getElementById('groupedOption').checked = isGrouped;
         document.getElementById('allOption').checked = !isGrouped;
-    }
-
-
-
-    function loadIcd10Options() {
-        fetch(`${apiBaseUrl}/api/dictionary/icd10/roots`, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            data.forEach(item => {
-                const checkboxWrapper = document.createElement('div');
-                checkboxWrapper.className = 'form-check';
-
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.className = 'form-check-input';
-                checkbox.id = item.id;
-                checkbox.value = item.id;
-
-                const label = document.createElement('label');
-                label.className = 'form-check-label';
-                label.setAttribute('for', item.id);
-                label.textContent = `${item.code} - ${item.name}`;
-
-                checkboxWrapper.appendChild(checkbox);
-                checkboxWrapper.appendChild(label);
-                icd10Container.appendChild(checkboxWrapper);
-            });
-            // После загрузки, отмечаем чекбоксы, если icdRoots передан в URL
-            const selectedICD10 = getQueryParam('icdRoots', '').split(',');
-            selectedICD10.forEach(icdRoot => {
-                const checkbox = document.getElementById(icdRoot);
-                if (checkbox) {
-                    checkbox.checked = true;
-                }
-            });
-        })
-        .catch(error => console.error('Ошибка загрузки диагнозов МКБ-10:', error));
-    }
-
-    // Функция для получения выбранных значений ICD-10
-    function getSelectedIcd10() {
-        const selectedCheckboxes = document.querySelectorAll('#icd10-container input[type="checkbox"]:checked');
-        return Array.from(selectedCheckboxes).map(checkbox => checkbox.value); // Возвращаем массив ID выбранных диагнозов
     }
 
     // Функция для получения параметров из URL
@@ -108,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // Показ временного индикатора загрузки
         synchronizePageSize();
         const inspectionsList = document.getElementById('inspectionsList');
-        inspectionsList.innerHTML = '<p>Загрузка...</p>';
+        //inspectionsList.innerHTML = '<p>Загрузка...</p>';
 
         const pageSize = getQueryParam('size', document.getElementById('pageSize').value || 5);
         const grouped = filterGrouped ? 'true' : 'false';
@@ -135,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(data => {
             inspectionsData = data.inspections;
             renderInspections(); // Отрисовываем данные после загрузки
-            setupPagination(data.pagination); // Настраиваем пагинацию
+            setupPagination(data.pagination, loadInspections);            
         })
         .catch(error => {
             console.error('Ошибка загрузки осмотров:', error);
@@ -175,8 +125,7 @@ document.addEventListener('DOMContentLoaded', function () {
         container.appendChild(leftColumn);
         container.appendChild(rightColumn);
         inspectionsList.appendChild(container);
-    }
-    
+    } 
     
     function renderInspection(cell, inspection, columnContainer, level = 0) {
             const inspectionBlock = document.createElement('div');
@@ -211,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Если у осмотра нет дочерних осмотров (hasNested = false), добавляем кнопку "Добавить осмотр"
             if (!inspection.hasNested) {
                 const addButton = document.createElement('button');
-                addButton.className = 'btn btn-outline-primary'; // Кнопка с белым фоном и синей обводкой
+                addButton.className = 'btn btn-outline-primary';
                 addButton.textContent = 'Добавить осмотр';
                 addButton.textContent = 'Добавить осмотр';
         
@@ -336,48 +285,6 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('groupedOption').checked = true;
     }
 
-    // Функция для установки пагинации
-    function setupPagination(pagination) {
-        const paginationElement = document.getElementById('pagination');
-        paginationElement.innerHTML = ''; // Очищаем пагинацию
-
-        const totalPages = pagination.count;
-        const currentPage = pagination.current;
-
-        if (currentPage > 1) {
-            const prevPageItem = document.createElement('li');
-            prevPageItem.className = 'page-item';
-            prevPageItem.innerHTML = `<a class="page-link" href="#">Предыдущая</a>`;
-            prevPageItem.addEventListener('click', function (event) {
-                event.preventDefault();
-                loadInspections(currentPage - 1);
-            });
-            paginationElement.appendChild(prevPageItem);
-        }
-
-        for (let i = 1; i <= totalPages; i++) {
-            const pageItem = document.createElement('li');
-            pageItem.className = `page-item ${i === currentPage ? 'active' : ''}`;
-            pageItem.innerHTML = `<a class="page-link" href="#">${i}</a>`;
-            pageItem.addEventListener('click', function (event) {
-                event.preventDefault();
-                loadInspections(i);
-            });
-            paginationElement.appendChild(pageItem);
-        }
-
-        if (currentPage < totalPages) {
-            const nextPageItem = document.createElement('li');
-            nextPageItem.className = 'page-item';
-            nextPageItem.innerHTML = `<a class="page-link" href="#">Следующая</a>`;
-            nextPageItem.addEventListener('click', function (event) {
-                event.preventDefault();
-                loadInspections(currentPage + 1);
-            });
-            paginationElement.appendChild(nextPageItem);
-        }
-    }
-
     // Обработка фильтра при нажатии на кнопку "Поиск"
     document.getElementById('filterBtn').addEventListener('click', function(event) {
         event.preventDefault();
@@ -387,6 +294,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // Далее используем selectedIcd10Ids для выполнения фильтрации осмотров
         loadInspections();// Передаем выбранные диагнозы в функцию загрузки осмотров
     });
+    loadPatientInfo(patientId, apiBaseUrl, authToken);
 
     setFilterOptions();  
     setupFilters(); 

@@ -1,6 +1,12 @@
-// icd10.js
+// URL и токен, если они глобально определены в основном файле
+const apiBaseUrl = 'https://mis-api.kreosoft.space';
+const authToken = localStorage.getItem('authToken');
 
-export function loadIcd10Options(authToken, apiBaseUrl, icd10Container, selectedIcd10FromURL) {
+// Контейнер для чекбоксов ICD-10
+const icd10Container = document.getElementById('icd10-container');
+
+// Загрузка ICD-10 опций
+function loadIcd10Options() {
     fetch(`${apiBaseUrl}/api/dictionary/icd10/roots`, {
         headers: {
             'Authorization': `Bearer ${authToken}`,
@@ -29,8 +35,8 @@ export function loadIcd10Options(authToken, apiBaseUrl, icd10Container, selected
             icd10Container.appendChild(checkboxWrapper);
         });
 
-        // После загрузки отмечаем чекбоксы, если icdRoots передан в URL
-        selectedIcd10FromURL.forEach(icdRoot => {
+        const selectedICD10 = getQueryParam('icdRoots', '').split(',');
+        selectedICD10.forEach(icdRoot => {
             const checkbox = document.getElementById(icdRoot);
             if (checkbox) {
                 checkbox.checked = true;
@@ -40,8 +46,19 @@ export function loadIcd10Options(authToken, apiBaseUrl, icd10Container, selected
     .catch(error => console.error('Ошибка загрузки диагнозов МКБ-10:', error));
 }
 
-export function getSelectedIcd10(icd10Container) {
-    if (!icd10Container) return []; // Проверка, что контейнер определен
-    const selectedCheckboxes = icd10Container.querySelectorAll('input[type="checkbox"]:checked');
-    return Array.from(selectedCheckboxes).map(checkbox => checkbox.value); // Возвращаем массив ID выбранных диагнозов
+// Функция для получения выбранных значений ICD-10
+function getSelectedIcd10() {
+    const selectedCheckboxes = document.querySelectorAll('#icd10-container input[type="checkbox"]:checked');
+    return Array.from(selectedCheckboxes).map(checkbox => checkbox.value);
 }
+
+// Функция для получения параметров из URL
+function getQueryParam(param, defaultValue) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.has(param) ? urlParams.get(param) : defaultValue;
+}
+
+// Экспорт функций на глобальный объект window
+window.loadIcd10Options = loadIcd10Options;
+window.getSelectedIcd10 = getSelectedIcd10;
+window.getQueryParam = getQueryParam;
