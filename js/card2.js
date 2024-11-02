@@ -150,7 +150,7 @@ document.addEventListener('DOMContentLoaded', function () {
         
             // Кнопка "Детали осмотра"
             const detailsButton = document.createElement('a');
-            detailsButton.href = '#'; // Здесь может быть ссылка на детали осмотра
+            detailsButton.href = `detailsInspection.html?id=${inspection.id}`; // Ссылка на страницу деталей осмотра с параметром id
             detailsButton.className = 'btn btn-primary me-2'; // Кнопка с отступом справа
             detailsButton.textContent = 'Детали осмотра';
     
