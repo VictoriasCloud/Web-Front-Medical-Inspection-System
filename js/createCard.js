@@ -6,76 +6,40 @@ document.addEventListener('DOMContentLoaded', function () {
     const diagnosisList = []; // Список добавленных диагнозов
     const consultationList = []; // Список добавленных консультаций
     const previousInspectionId = urlParams.get('previousInspectionId');
-
      // Устанавливаем значения переключателей и заполняем данные
      const primaryInspectionRadio = document.getElementById('primaryInspection');
      const secondaryInspectionRadio = document.getElementById('secondaryInspection');
      const previousInspectionSelect = document.getElementById('previousInspectionSelect');
+     const previousInspectionContainer = document.getElementById('previousInspectionContainer');
 
-
-     // Проверяем значение previousInspectionId
-    if (previousInspectionId === 'null') {
-        // Если previousInspectionId == null, устанавливаем "Первичный осмотр" по умолчанию
-        primaryInspectionRadio.checked = true;
-    } else {
-        // Если указан previousInspectionId, выбираем "Повторный осмотр"
+    // Если previousInspectionId задан, отмечаем как "Повторный осмотр"
+    if (previousInspectionId && previousInspectionId !== 'null') {
         secondaryInspectionRadio.checked = true;
-
-        // Загружаем данные предыдущего осмотра
-        fetch(`${apiBaseUrl}/api/patient/${patientId}/inspection/${previousInspectionId}`, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Добавляем в селект информацию о предыдущем осмотре
-            const option = document.createElement('option');
-            option.value = data.id;
-            option.textContent = `${new Date(data.date).toLocaleDateString()} - ${data.diagnosis?.name || 'Диагноз неизвестен'}`;
-            previousInspectionSelect.appendChild(option);
-            previousInspectionSelect.value = data.id;
-        })
-        .catch(error => console.error('Ошибка загрузки предыдущего осмотра:', error));
+        previousInspectionContainer.style.display = 'block'; // Показываем select
+        loadPreviousInspections(apiBaseUrl, authToken, patientId, previousInspectionSelect); // Загружаем список осмотров
+        previousInspectionSelect.value = previousInspectionId; // Устанавливаем выбранный осмотр
+    } else {
+        primaryInspectionRadio.checked = true;
     }
 
-    // Обработчик для выбора типа осмотра
+    // Обработчик для переключения типа осмотра
     primaryInspectionRadio.addEventListener('change', function () {
-        if (primaryInspectionRadio.checked) {
-            previousInspectionSelect.disabled = true; // Отключаем выбор предыдущего осмотра
-        }
+        previousInspectionContainer.style.display = 'none';
+        previousInspectionSelect.value = ''; // Сбрасываем выбранное значение
+        previousInspectionId = null; // Сбрасываем значение previousInspectionId
     });
 
     secondaryInspectionRadio.addEventListener('change', function () {
-        if (secondaryInspectionRadio.checked) {
-            previousInspectionSelect.disabled = false; // Включаем выбор предыдущего осмотра
-        }
+        previousInspectionContainer.style.display = 'block'; // Показываем select
+        loadPreviousInspections(apiBaseUrl, authToken, patientId, previousInspectionSelect); // Загружаем список осмотров
     });
 
-    // Заполняем выпадающий список предыдущих осмотров, если выбран "Повторный осмотр"
-    if (previousInspectionId === 'null' || secondaryInspectionRadio.checked) {
-        loadPreviousInspections();
-    }
 
-    function loadPreviousInspections() {
-        fetch(`${apiBaseUrl}/api/patient/${patientId}/inspections`, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            data.inspections.forEach(inspection => {
-                const option = document.createElement('option');
-                option.value = inspection.id;
-                option.textContent = `${new Date(inspection.date).toLocaleDateString()} - ${inspection.diagnosis?.name || 'Диагноз неизвестен'}`;
-                previousInspectionSelect.appendChild(option);
-            });
-        })
-        .catch(error => console.error('Ошибка загрузки списка осмотров:', error));
-    }
+    // Обработчик для изменения выбранного осмотра
+    previousInspectionSelect.addEventListener('change', function () {
+        previousInspectionId = previousInspectionSelect.value || null; // Устанавливаем previousInspectionId на выбранное значение
+    }); 
+    
 
     if (!authToken) {
         alert('Авторизация требуется для доступа к этой странице.');
@@ -99,43 +63,10 @@ document.addEventListener('DOMContentLoaded', function () {
         "Осложнение": "Complication"
     };
 
-    // Функция поиска диагнозов
-    function fetchDiagnoses(query = '') {
-        fetch(`${apiBaseUrl}/api/dictionary/icd10?request=${query}&page=1&size=20`, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            diagnosisResults.innerHTML = '';
-            diagnosisResults.style.display = 'block';
-
-            data.records.forEach(diagnosis => {
-                const item = document.createElement('a');
-                item.href = '#';
-                item.className = 'list-group-item list-group-item-action';
-                item.textContent = `${diagnosis.code} - ${diagnosis.name}`;
-                item.dataset.id = diagnosis.id;
-                item.dataset.name = diagnosis.name;
-
-                item.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    diagnosisSearch.value = `${diagnosis.code} - ${diagnosis.name}`;
-                    diagnosisSearch.dataset.diagnosisId = diagnosis.id;
-                    diagnosisResults.style.display = 'none';
-                });
-
-                diagnosisResults.appendChild(item);
-            });
-        })
-        .catch(error => console.error('Ошибка загрузки диагнозов ICD-10:', error));
-    }
 
     function addDiagnosisToList(diagnosis) {
         const diagnosisItem = document.createElement('div');
-        diagnosisItem.className = 'd-flex flex-column align-items-start mb-2 p-2 border rounded';
+        diagnosisItem.className = 'd-flex flex-column align-items-start mb-2 p-2 border bg-white rounded';
 
         diagnosisItem.innerHTML = `
             <div><strong>${diagnosis.code} - ${diagnosis.name}</strong></div>
@@ -216,12 +147,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 
-    diagnosisSearch.addEventListener('focus', () => fetchDiagnoses());
+    diagnosisSearch.addEventListener('focus', () => fetchDiagnoses('', authToken, apiBaseUrl, diagnosisResults, diagnosisSearch));
 
     diagnosisSearch.addEventListener('input', function() {
         const query = this.value.trim();
         if (query.length > 0) {
-            fetchDiagnoses(query);
+            fetchDiagnoses(query, authToken, apiBaseUrl, diagnosisResults, diagnosisSearch);
         } else {
             diagnosisResults.style.display = 'none';
         }
@@ -312,12 +243,19 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('addConsultation').disabled = !isChecked;
     });
 
-    consultationSpecialty.addEventListener('focus', () => fetchSpecialties());
+consultationSpecialty.addEventListener('focus', () => {
+    const query = consultationSpecialty.value.trim();
+    fetchSpecialties(query, authToken, apiBaseUrl, consultationResults, consultationSpecialty);
+});
 
+
+    const consultationResults = document.getElementById('consultationResults');
+// Передаём все необходимые аргументы в вызов функции
     consultationSpecialty.addEventListener('input', function() {
         const query = this.value.trim();
-        fetchSpecialties(query);
+        fetchSpecialties(query, authToken, apiBaseUrl, consultationResults, consultationSpecialty);
     });
+
 
     const conclusionTypeSelect = document.getElementById('conclusionType');
     const nextVisitContainer = document.getElementById('nextVisit');
@@ -389,7 +327,7 @@ document.addEventListener('DOMContentLoaded', function () {
             conclusion: conclusionType,
             nextVisitDate: nextVisitDate ? new Date(nextVisitDate).toISOString() : null,
             deathDate: deathDate ? new Date(deathDate).toISOString() : null,
-            previousInspectionId: null,
+            previousInspectionId: previousInspectionId,
             diagnoses: diagnoses,
             consultations: consultations
         };

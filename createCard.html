@@ -52,17 +52,25 @@
     <h1>Создание осмотра</h1>
 
     <!-- Основная информация пациента -->
-    <div class="card mb-3 p-3">
+    <div class="card mb-3 p-3 bg-light">
         <h3 id="patientName">Имя пациента <span>👤</span></h3>
         <div class="d-flex justify-content-between">
             <span id="patientDob">Дата рождения: --</span>
             <span>
-                <input type="radio" id="primaryInspection" name="inspectionType" class="form-check-input" value="primary">
+                <input type="radio" id="primaryInspection" name="inspectionType" class="form-check-input" value="primary" checked>
                 <label for="primaryInspection" class="form-check-label">Первичный осмотр</label>
         
                 <input type="radio" id="secondaryInspection" name="inspectionType" class="form-check-input ms-3" value="secondary">
                 <label for="secondaryInspection" class="form-check-label">Повторный осмотр</label>
             </span>
+        </div>
+    
+        <!-- Поле выбора предыдущего осмотра, скрытое по умолчанию -->
+        <div class="mt-3" id="previousInspectionContainer" style="display: none;">
+            <label for="previousInspectionSelect">Предыдущий осмотр</label>
+            <select id="previousInspectionSelect" class="form-select">
+                <option value="">Выберите осмотр</option>
+            </select>
         </div>
         
         <div class="mt-3">
@@ -70,21 +78,22 @@
             <input type="datetime-local" id="inspectionDate" class="form-control" required>
         </div>
     </div>
+    
 
     <!-- Жалобы -->
-    <div class="card mb-3 p-3">
+    <div class="card mb-3 p-3  bg-light">
         <h4>Жалобы</h4>
         <textarea id="complaints" class="form-control" rows="2"></textarea>
     </div>
 
     <!-- Анамнез заболевания -->
-    <div class="card mb-3 p-3">
+    <div class="card mb-3 p-3 bg-light">
         <h4>Анамнез заболевания</h4>
         <textarea id="anamnesis" class="form-control" rows="3"></textarea>
     </div>
 
 <!-- Консультация -->
-<div class="card mb-3 p-3">
+<div class="card mb-3 p-3  bg-light">
     <h4>Консультация</h4>
     <div class="form-check">
         <input type="checkbox" id="needConsultation" class="form-check-input">
@@ -92,7 +101,7 @@
     </div>
     <div class="form-group position-relative">
         <label for="consultationSpecialty">Специализация консультанта</label>
-        <input type="text" id="consultationSpecialty" class="form-control mt-2" placeholder="Введите специальность" disabled>
+        <input type="text" id="consultationSpecialty" class="form-control" placeholder="Введите специальность" disabled>
         <div id="consultationResults" class="list-group position-absolute w-100" style="z-index: 10; max-height: 200px; overflow-y: auto; display: none;"></div>
     </div>
     <textarea id="consultationComment" class="form-control mt-2" placeholder="Комментарий" disabled></textarea>
@@ -100,11 +109,11 @@
 
     
 <!-- Контейнер для списка добавленных консультаций -->
-<div id="consultationList" class="mt-3"></div>
+<div id="consultationList" class="mt-3  bg-light"></div>
 
 </div>
     <!-- Диагнозы -->
-    <div class="card mb-3 p-3">
+    <div class="card mb-3 p-3 bg-light">
         <h4>Диагнозы</h4>
         <div class="form-group position-relative">
             <label for="diagnosisSearch">Поиск диагноза (ICD-10):</label>
@@ -138,14 +147,14 @@
     </div>
 
     <!-- Рекомендации по лечению -->
-<div class="card mb-3 p-3">
+<div class="card mb-3 p-3  bg-light">
     <h4>Рекомендации по лечению</h4>
     <textarea id="treatment" class="form-control" rows="3" placeholder="Введите рекомендации по лечению..."></textarea>
 </div>
 
 
 <!-- Заключение -->
-<div class="card mb-3 p-3">
+<div class="card mb-3 p-3  bg-light">
     <h4>Заключение</h4>
     <select id="conclusionType" class="form-select">
         <option value="Disease">Болезнь</option>
@@ -170,6 +179,8 @@
     <button id="saveInspection" class="btn btn-success">Сохранить осмотр</button>
 </div>
 <script src="js/getUserName.js"></script>
+<script src="js/fetchDiagnoses.js"></script>
+<script src="js/loadPreviousInspections.js"></script>
 <script src="js/patientInfo.js"></script>
 <script src="js/specialtySearch.js"></script>
 <script src="js/createCard.js"></script>
