@@ -1,5 +1,6 @@
+// loadPreviousInspections.js
 function loadPreviousInspections(apiBaseUrl, authToken, patientId, previousInspectionSelect) {
-    fetch(`${apiBaseUrl}/api/patient/${patientId}/inspections/search`, {
+    return fetch(`${apiBaseUrl}/api/patient/${patientId}/inspections/search`, {
         headers: {
             'Authorization': `Bearer ${authToken}`,
             'Accept': 'application/json'
@@ -9,13 +10,17 @@ function loadPreviousInspections(apiBaseUrl, authToken, patientId, previousInspe
     .then(data => {
         previousInspectionSelect.innerHTML = '<option value="">Выберите осмотр</option>';
 
-        // Поскольку data является массивом, сразу выполняем итерацию
-        data.forEach(inspection => {
-            const option = document.createElement('option');
-            option.value = inspection.id;
-            option.textContent = `${new Date(inspection.date).toLocaleDateString()} - ${inspection.diagnosis ? inspection.diagnosis.code + ' - ' + inspection.diagnosis.name : 'Диагноз неизвестен'}`;
-            previousInspectionSelect.appendChild(option);
-        });
+        // Проверяем, что data является массивом
+        if (Array.isArray(data)) {
+            data.forEach(inspection => {
+                const option = document.createElement('option');
+                option.value = inspection.id;
+                option.textContent = `${new Date(inspection.date).toLocaleDateString()} - ${inspection.diagnosis ? inspection.diagnosis.code + ' - ' + inspection.diagnosis.name : 'Диагноз неизвестен'}`;
+                previousInspectionSelect.appendChild(option);
+            });
+        } else {
+            console.error('Неверный формат данных от сервера:', data);
+        }
     })
     .catch(error => console.error('Ошибка загрузки списка осмотров:', error));
 }

@@ -12,15 +12,20 @@ document.addEventListener('DOMContentLoaded', function () {
      const previousInspectionSelect = document.getElementById('previousInspectionSelect');
      const previousInspectionContainer = document.getElementById('previousInspectionContainer');
 
-    // Если previousInspectionId задан, отмечаем как "Повторный осмотр"
-    if (previousInspectionId && previousInspectionId !== 'null') {
-        secondaryInspectionRadio.checked = true;
-        previousInspectionContainer.style.display = 'block'; // Показываем select
-        loadPreviousInspections(apiBaseUrl, authToken, patientId, previousInspectionSelect); // Загружаем список осмотров
-        previousInspectionSelect.value = previousInspectionId; // Устанавливаем выбранный осмотр
-    } else {
-        primaryInspectionRadio.checked = true;
-    }
+   // Проверка на наличие previousInspectionId
+   if (previousInspectionId && previousInspectionId !== 'null') {
+    secondaryInspectionRadio.checked = true;
+    previousInspectionContainer.style.display = 'block'; // Показываем select
+
+    // Загружаем список осмотров и устанавливаем previousInspectionSelect на нужный элемент
+    loadPreviousInspections(apiBaseUrl, authToken, patientId, previousInspectionSelect)
+        .then(() => {
+            // Устанавливаем выбранный осмотр после загрузки списка
+            previousInspectionSelect.value = previousInspectionId;
+        });
+} else {
+    primaryInspectionRadio.checked = true;
+}
 
     // Обработчик для переключения типа осмотра
     primaryInspectionRadio.addEventListener('change', function () {
