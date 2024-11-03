@@ -102,8 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    // Функция для загрузки комментариев конкретной консультации
-function loadCommentsForConsultation(consultationId, listItem) {
+// Функция для загрузки комментариев консультации
+function loadComments(consultationId, container) {
     fetch(`https://mis-api.kreosoft.space/api/consultation/${consultationId}`, {
         headers: {
             'Authorization': `Bearer ${authToken}`,
@@ -112,22 +112,13 @@ function loadCommentsForConsultation(consultationId, listItem) {
     })
     .then(response => response.json())
     .then(data => {
-        const commentsByParent = groupCommentsByParent(data.comments || []);
-        const commentsContainer = document.createElement('div');
-        commentsContainer.className = 'comments mt-2';
-
-        // Отображаем корневые комментарии
-        if (commentsByParent[null]) {
-            commentsByParent[null].forEach(comment => renderComment(comment, commentsContainer, commentsByParent));
-        }
-
-        listItem.appendChild(commentsContainer);
+        const commentsByParent = groupCommentsByParent(data.comments);
+        commentsByParent[null]?.forEach(comment => renderComment(comment, container, commentsByParent));
     })
     .catch(error => console.error('Ошибка при загрузке комментариев:', error));
 }
     
 
-// При нажатии на консультацию загружаем комментарии
 function renderConsultations(consultations) {
     const consultationsList = document.getElementById('consultations-list');
     if (!consultationsList) return;
@@ -136,44 +127,55 @@ function renderConsultations(consultations) {
     consultations.forEach(consultation => {
         const listItem = document.createElement('div');
         listItem.className = 'p-3 mb-2 border rounded bg-white';
+        listItem.setAttribute('data-consultation-id', consultation.id); // Добавляем идентификатор консультации
 
+        // Контейнер для комментариев, скрытый по умолчанию
+        const commentsContainer = document.createElement('div');
+        commentsContainer.className = 'comments mt-2';
+        commentsContainer.style.display = 'none';
+
+        // Кнопка для показа/скрытия комментариев
+        const toggleButton = document.createElement('span');
+        toggleButton.className = 'text-primary cursor-pointer';
+        toggleButton.style.cursor = 'pointer';
+        toggleButton.textContent = '(показать)';
+
+        // Событие на кнопку для показа/скрытия комментариев
+        toggleButton.addEventListener('click', () => {
+            if (commentsContainer.style.display === 'none') {
+                commentsContainer.style.display = 'block';
+                toggleButton.textContent = '(скрыть)';
+                loadComments(consultation.id, commentsContainer); // Загружаем комментарии только при открытии
+            } else {
+                commentsContainer.style.display = 'none';
+                toggleButton.textContent = '(показать)';
+                commentsContainer.innerHTML = ''; // Очищаем, чтобы не дублировать при повторном открытии
+            }
+        });
+
+        // Добавляем основную информацию о консультации
         listItem.innerHTML = `
             <strong>Специальность консультанта: ${consultation.speciality.name}</strong><br>
-            Комментарий врача-автора: ${consultation.rootComment.content}<br>
-            <em>Количество ответов: ${consultation.commentsNumber}</em>
+            Комментарий врача: ${consultation.rootComment.content}<br>
+            <div class="d-flex align-items-center">
+                <em class="me-1">Количество ответов: ${consultation.commentsNumber}</em>
+            </div>
         `;
 
-        listItem.addEventListener('click', () => loadCommentsForConsultation(consultation.id, listItem));
+        // Вставляем кнопку (показать/скрыть) рядом с количеством ответов
+        listItem.querySelector('.d-flex').appendChild(toggleButton);
+        listItem.appendChild(commentsContainer);
 
         consultationsList.appendChild(listItem);
     });
-    }
+}
 
-    function toggleComments(consultation, listItem) {
-        const existingCommentsContainer = listItem.querySelector('.comments');
-        if (existingCommentsContainer) {
-            existingCommentsContainer.classList.toggle('d-none');
-        } else {
-            const commentsContainer = document.createElement('div');
-            commentsContainer.className = 'comments mt-2';
-    
-            // Проверка, что consultation.comments - массив
-            const commentsByParent = groupCommentsByParent(consultation.comments || []);
-            
-            // Отображаем корневой комментарий
-            if (commentsByParent[null]) {
-                commentsByParent[null].forEach(comment => renderComment(comment, commentsContainer, commentsByParent));
-            }
-    
-            listItem.appendChild(commentsContainer);
-        }
-    }
     
 
 // Функция для группировки комментариев по parentId
 function groupCommentsByParent(comments) {
     if (!Array.isArray(comments)) {
-        return {}; // Возвращаем пустой объект, если comments не массив
+        return {}; //раньше нужно было для проверки, но щас пусть останется
     }
     
     return comments.reduce((acc, comment) => {
@@ -186,7 +188,7 @@ function groupCommentsByParent(comments) {
 
 
 
-// Функция для рендеринга комментария и его дочерних комментариев
+// Отрисовка комментария и его дочерних комментариев
 function renderComment(comment, container, commentsByParent) {
     const commentElement = document.createElement('div');
     commentElement.className = 'p-2 mb-1 border rounded bg-light';
@@ -194,7 +196,7 @@ function renderComment(comment, container, commentsByParent) {
     const createDate = new Date(comment.createTime).toLocaleString();
     let lastEditedInfo = '';
 
-    // Проверка, отличается ли время изменения от времени создания
+    //Проверяем, отличается ли время изменения от времени создания. если да, то отображаем изменение
     if (comment.modifiedDate && comment.modifiedDate !== comment.createTime) {
         const editedDate = new Date(comment.modifiedDate).toLocaleString();
         lastEditedInfo = `<span class="text-muted" title="Последнее изменение: ${editedDate}">(Изменено в ${editedDate})</span>`;
@@ -275,19 +277,33 @@ function renderComment(comment, container, commentsByParent) {
             },
             body: JSON.stringify({ content: updatedContent })
         })
-        .then(response => response.json())
-        .then(updatedComment => {
-            commentElement.querySelector('strong').nextSibling.nodeValue = `: ${updatedComment.content}`;
-            const editedSpan = commentElement.querySelector('.text-muted');
-            if (editedSpan) {
-                const editedDate = new Date(updatedComment.modifiedDate).toLocaleString();
-                editedSpan.textContent = ' (Изменено)';
-                editedSpan.setAttribute('title', `Последнее изменение: ${editedDate}`);
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Ошибка: ${response.status}`);
             }
+            return response;
+        })
+        .then(() => {
+            // Убираем форму редактирования
             editForm.remove();
+    
+            // Находим родительский элемент консультации
+            const consultationContainer = commentElement.closest('[data-consultation-id]');
+            const commentsContainer = consultationContainer.querySelector('.comments');
+    
+            // Обновляем комм-ии в этой консультации и сразу раскрываем их
+            commentsContainer.innerHTML = '';
+            commentsContainer.style.display = 'block';
+            const toggleButton = consultationContainer.querySelector('.text-primary');
+            toggleButton.textContent = '(скрыть)';
+    
+            // Загружаем и отображаем обновленные комментарии уаа
+            loadComments(consultationContainer.getAttribute('data-consultation-id'), commentsContainer);
         })
         .catch(error => console.error('Ошибка при редактировании комментария:', error));
     }
+    
+    
 
 
     function showReplyForm(consultation, commentElement, parentId) {
@@ -328,6 +344,21 @@ function renderComment(comment, container, commentsByParent) {
         })
         .catch(error => console.error('Ошибка при отправке ответа:', error));
     }
+
+    function fetchCommentsForConsultation(consultationId, container) {
+        fetch(`${apiBaseUrl}/api/consultation/${consultationId}`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const commentsByParent = groupCommentsByParent(data.comments);
+            commentsByParent[null].forEach(comment => renderComment(comment, container, commentsByParent));
+        })
+        .catch(error => console.error('Ошибка при загрузке комментариев:', error));
+    }
+    
     
     
 
