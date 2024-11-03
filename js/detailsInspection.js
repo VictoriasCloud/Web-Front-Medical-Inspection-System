@@ -12,47 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const conclusionTypeSelect = document.getElementById('conclusionType');
 
 
-    // Сопоставление типов диагноза на русском и английском языках
-    const diagnosisTypeMapping = {
-        "Основной": "Main",
-        "Сопутствующий": "Concomitant",
-        "Осложнение": "Complication"
-    };
-
-    function updateConclusionFields() {
-        const nextVisitContainer = document.getElementById('nextVisit');
-        const deathDateContainer = document.getElementById('deathDate');
-        
-        // Убедимся, что контейнеры существуют
-        if (!conclusionTypeSelect || !nextVisitContainer || !deathDateContainer) return;
-
-        // Скрываем оба контейнера по умолчанию
-        nextVisitContainer.classList.add('d-none');
-        deathDateContainer.classList.add('d-none');
-
-        // Показываем нужное поле в зависимости от значения
-        if (conclusionTypeSelect.value === 'Disease') {
-            nextVisitContainer.classList.remove('d-none');
-        } else if (conclusionTypeSelect.value === 'Death') {
-            deathDateContainer.classList.remove('d-none');
-        }
-    }
-    
-    const conclusionField = document.getElementById('conclusionType');
-    if (conclusionField) {
-        conclusionField.addEventListener('change', updateConclusionFields);
-        updateConclusionFields(); // Инициализируем видимость полей при загрузке
-    }
-    
-    
-
-
-    // Добавляем обработчик события, если элемент `conclusionTypeSelect` существует
-    if (conclusionTypeSelect) {
-        conclusionTypeSelect.addEventListener('change', updateConclusionFields);
-        updateConclusionFields();
-    }
-
     // Проверка авторизации
     if (!authToken) {
         alert('Авторизация требуется для доступа к этой странице.');
@@ -141,66 +100,350 @@ document.addEventListener('DOMContentLoaded', () => {
         renderConsultations(inspection.consultations);
     }
 
-    function renderDiagnoses(diagnoses) {
-        const diagnosesList = document.getElementById('diagnoses-list');
-        if (!diagnosesList) return;
+
+
+    // Функция для загрузки комментариев конкретной консультации
+function loadCommentsForConsultation(consultationId, listItem) {
+    fetch(`https://mis-api.kreosoft.space/api/consultation/${consultationId}`, {
+        headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const commentsByParent = groupCommentsByParent(data.comments || []);
+        const commentsContainer = document.createElement('div');
+        commentsContainer.className = 'comments mt-2';
+
+        // Отображаем корневые комментарии
+        if (commentsByParent[null]) {
+            commentsByParent[null].forEach(comment => renderComment(comment, commentsContainer, commentsByParent));
+        }
+
+        listItem.appendChild(commentsContainer);
+    })
+    .catch(error => console.error('Ошибка при загрузке комментариев:', error));
+}
     
-        diagnosesList.innerHTML = '';
-        diagnoses.forEach(diagnosis => {
-            const listItem = document.createElement('li');
-            listItem.className = 'p-3 mb-2 border rounded bg-white'; // Классы Bootstrap для обводки и отступов
-    
-            listItem.innerHTML = `
-                <strong>${diagnosis.code} - ${diagnosis.name}</strong><br>
-                Тип: ${diagnosis.type}<br>
-                Описание: ${diagnosis.description || 'Нет описания'}
-            `;
-    
-            diagnosesList.appendChild(listItem);
-        });
-    }
-    
 
-    function renderConsultations(consultations) {
-        const consultationsList = document.getElementById('consultations-list');
-        if (!consultationsList) return;
+// При нажатии на консультацию загружаем комментарии
+function renderConsultations(consultations) {
+    const consultationsList = document.getElementById('consultations-list');
+    if (!consultationsList) return;
 
-        consultationsList.innerHTML = '';
-        consultations.forEach(consultation => {
-            const listItem = document.createElement('div');
-            listItem.className = 'p-3 mb-2 border rounded bg-white'; // Классы Bootstrap для обводки и отступов
+    consultationsList.innerHTML = '';
+    consultations.forEach(consultation => {
+        const listItem = document.createElement('div');
+        listItem.className = 'p-3 mb-2 border rounded bg-white';
 
+        listItem.innerHTML = `
+            <strong>Специальность консультанта: ${consultation.speciality.name}</strong><br>
+            Комментарий врача: ${consultation.rootComment.content}<br>
+            <em>Количество ответов: ${consultation.commentsNumber}</em>
+        `;
 
-            listItem.innerHTML = `
-                <strong>Специальность консультанта: ${consultation.speciality.name}</strong><br>
-                Комментарий врача: ${consultation.rootComment.content}<br>
-                <em>Количество ответов: ${consultation.commentsNumber}</em>
-            `;
+        listItem.addEventListener('click', () => loadCommentsForConsultation(consultation.id, listItem));
 
-            listItem.addEventListener('click', () => {
-                toggleComments(consultation, listItem);
-            });
-
-            consultationsList.appendChild(listItem);
-        });
+        consultationsList.appendChild(listItem);
+    });
     }
 
     function toggleComments(consultation, listItem) {
-        if (listItem.querySelector('.comments')) {
-            const commentsContainer = listItem.querySelector('.comments');
-            commentsContainer.classList.toggle('d-none');
+        const existingCommentsContainer = listItem.querySelector('.comments');
+        if (existingCommentsContainer) {
+            existingCommentsContainer.classList.toggle('d-none');
         } else {
             const commentsContainer = document.createElement('div');
             commentsContainer.className = 'comments mt-2';
-
-            consultation.rootComment.replies.forEach(reply => {
-                const comment = document.createElement('p');
-                comment.innerHTML = `<strong>${reply.author.name}</strong>: ${reply.content}`;
-                commentsContainer.appendChild(comment);
-            });
-
+    
+            // Проверка, что consultation.comments - массив
+            const commentsByParent = groupCommentsByParent(consultation.comments || []);
+            
+            // Отображаем корневой комментарий
+            if (commentsByParent[null]) {
+                commentsByParent[null].forEach(comment => renderComment(comment, commentsContainer, commentsByParent));
+            }
+    
             listItem.appendChild(commentsContainer);
         }
+    }
+    
+
+// Функция для группировки комментариев по parentId
+function groupCommentsByParent(comments) {
+    if (!Array.isArray(comments)) {
+        return {}; // Возвращаем пустой объект, если comments не массив
+    }
+    
+    return comments.reduce((acc, comment) => {
+        const parentId = comment.parentId || null;
+        if (!acc[parentId]) acc[parentId] = [];
+        acc[parentId].push(comment);
+        return acc;
+    }, {});
+}
+
+
+
+    // Функция для рендеринга комментария и его дочерних комментариев
+    function renderComment(comment, container, commentsByParent) {
+        const commentElement = document.createElement('div');
+        commentElement.className = 'p-2 mb-1 border rounded bg-light';
+
+        let lastEditedInfo = '';
+        if (comment.modifiedDate) {
+            const editedDate = new Date(comment.modifiedDate).toLocaleString();
+            lastEditedInfo = `<span class="text-muted" title="Последнее изменение: ${editedDate}"> (Изменено)</span>`;
+        }
+
+        commentElement.innerHTML = `
+            <strong>${comment.author}</strong>: ${comment.content} ${lastEditedInfo}
+            <div class="d-flex justify-content-end mt-1">
+                ${comment.authorId === currentDoctorId ? 
+                    `<button class="btn btn-sm btn-secondary me-2 edit-comment-btn">Редактировать</button>` : ''}
+                <button class="btn btn-sm btn-primary reply-btn">Ответить</button>
+            </div>
+        `;
+
+        // Обработчик для кнопки "Редактировать"
+        commentElement.querySelector('.edit-comment-btn')?.addEventListener('click', () => {
+            showEditCommentForm(comment, commentElement);
+        });
+
+        // Обработчик для кнопки "Ответить"
+        commentElement.querySelector('.reply-btn').addEventListener('click', () => {
+            showReplyForm(consultation, commentElement, comment.id);
+        });
+
+        container.appendChild(commentElement);
+
+        // Если у комментария есть дочерние комментарии, отображаем их рекурсивно
+        if (commentsByParent[comment.id]) {
+            const repliesContainer = document.createElement('div');
+            repliesContainer.className = 'ms-3 mt-2';
+            commentsByParent[comment.id].forEach(reply => renderComment(reply, repliesContainer, commentsByParent));
+            container.appendChild(repliesContainer);
+        }
+    }
+
+    function showEditCommentForm(comment, commentElement) {
+        const editForm = document.createElement('div');
+        editForm.className = 'edit-form mt-2';
+    
+        editForm.innerHTML = `
+            <textarea class="form-control mb-2">${comment.content}</textarea>
+            <button class="btn btn-sm btn-success save-edit-btn">Сохранить</button>
+            <button class="btn btn-sm btn-secondary cancel-edit-btn">Отмена</button>
+        `;
+    
+        commentElement.appendChild(editForm);
+    
+        editForm.querySelector('.save-edit-btn').addEventListener('click', () => {
+            const updatedContent = editForm.querySelector('textarea').value;
+            saveEditedComment(comment.id, updatedContent, commentElement, editForm);
+        });
+    
+        editForm.querySelector('.cancel-edit-btn').addEventListener('click', () => {
+            editForm.remove();
+        });
+    }
+
+
+    function saveEditedComment(commentId, updatedContent, commentElement, editForm) {
+        fetch(`${apiBaseUrl}/api/consultation/comment/${commentId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ content: updatedContent })
+        })
+        .then(response => response.json())
+        .then(updatedComment => {
+            commentElement.querySelector('strong').nextSibling.nodeValue = `: ${updatedComment.content}`;
+            const editedSpan = commentElement.querySelector('.text-muted');
+            if (editedSpan) {
+                const editedDate = new Date(updatedComment.modifiedDate).toLocaleString();
+                editedSpan.textContent = ' (Изменено)';
+                editedSpan.setAttribute('title', `Последнее изменение: ${editedDate}`);
+            }
+            editForm.remove();
+        })
+        .catch(error => console.error('Ошибка при редактировании комментария:', error));
+    }
+
+
+    function showReplyForm(consultation, commentElement, parentId) {
+        const replyForm = document.createElement('div');
+        replyForm.className = 'reply-form mt-2';
+    
+        replyForm.innerHTML = `
+            <textarea class="form-control mb-2" placeholder="Ваш ответ..."></textarea>
+            <button class="btn btn-sm btn-primary send-reply-btn">Отправить</button>
+            <button class="btn btn-sm btn-secondary cancel-reply-btn">Отмена</button>
+        `;
+    
+        commentElement.appendChild(replyForm);
+    
+        replyForm.querySelector('.send-reply-btn').addEventListener('click', () => {
+            const replyContent = replyForm.querySelector('textarea').value;
+            sendReply(consultation.id, replyContent, commentElement, replyForm, parentId);
+        });
+    
+        replyForm.querySelector('.cancel-reply-btn').addEventListener('click', () => {
+            replyForm.remove();
+        });
+    }
+
+    function sendReply(consultationId, replyContent, commentElement, replyForm, parentId) {
+        fetch(`${apiBaseUrl}/api/consultation/${consultationId}/comment`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ content: replyContent, parentId: parentId })
+        })
+        .then(response => response.json())
+        .then(newReply => {
+            renderComment(newReply, commentElement.parentElement); // Добавляем новый ответ в список
+            replyForm.remove();
+        })
+        .catch(error => console.error('Ошибка при отправке ответа:', error));
+    }
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+    document.getElementById('saveChangesBtn').addEventListener('click', () => {
+        const complaintsField = document.getElementById('edit-complaints');
+        const anamnesisField = document.getElementById('edit-anamnesis');
+        const treatmentField = document.getElementById('edit-treatment');
+        const conclusionField = document.getElementById('conclusionType');
+        const nextVisitDateField = document.getElementById('nextVisitDate');
+        const deathDateField = document.getElementById('deathDateInput');
+    
+        // Установка значения заключения
+        const conclusionValue = conclusionField ? conclusionField.value : null;
+    
+        // Установка значений для дат в зависимости от заключения
+        let nextVisitDate = nextVisitDateField ? nextVisitDateField.value || null : null;
+        let deathDate = deathDateField ? deathDateField.value || null : null;
+    
+        if (conclusionValue === 'Death') {
+            nextVisitDate = null; // Если заключение "Смерть", удаляем дату следующего визита
+        } else if (conclusionValue === 'Disease') {
+            deathDate = null; // Если заключение "Болезнь", удаляем дату смерти
+        } else if (conclusionValue === 'Recovery') {
+            // Если заключение "Выздоровление", оба поля даты не должны быть отправлены
+            nextVisitDate = null;
+            deathDate = null;
+        }
+    
+        const updatedData = {
+            complaints: complaintsField ? complaintsField.value : '',
+            anamnesis: anamnesisField ? anamnesisField.value : '',
+            treatment: treatmentField ? treatmentField.value : '',
+            conclusion: conclusionValue,
+            nextVisitDate: nextVisitDate,
+            deathDate: deathDate,
+            diagnoses: [] // Пустой массив для наполнения с актуальными icdDiagnosisId
+        };
+    
+        console.log("Данные для отправки:", JSON.stringify(updatedData));
+    
+        const fetchPromises = diagnosisList.map(diagnosis => {
+            return new Promise((resolve) => {
+                fetchDiagnoses(diagnosis.code, authToken, apiBaseUrl, null, null)
+                    .then(records => {
+                        const matchedDiagnosis = records.find(record => record.code === diagnosis.code);
+                        if (matchedDiagnosis) {
+                            updatedData.diagnoses.push({
+                                icdDiagnosisId: matchedDiagnosis.id,
+                                description: diagnosis.description || '',
+                                type: diagnosis.type || "Main"
+                            });
+                        } else {
+                            console.warn(`Не найден диагноз для кода ${diagnosis.code} в МКБ-10`);
+                        }
+                        resolve();
+                    })
+                    .catch(error => {
+                        console.error('Ошибка при поиске icdDiagnosisId:', error);
+                        resolve();
+                    });
+            });
+        });
+    
+        Promise.all(fetchPromises).then(() => {
+            fetch(`${apiBaseUrl}/api/inspection/${inspectionId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updatedData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('Изменения успешно сохранены.');
+                    location.reload();
+                } else {
+                    return response.json().then(errorData => {
+                        console.error("Ошибка при сохранении:", errorData.message || "Неизвестная ошибка");
+                        throw new Error('Ошибка при сохранении изменений.');
+                    });
+                }
+            })
+            .catch(error => console.error('Ошибка при сохранении:', error));
+        });
+    });
+
+
+
+
+
+
+
+    function updateConclusionFields() {
+        const nextVisitContainer = document.getElementById('nextVisit');
+        const deathDateContainer = document.getElementById('deathDate');
+        
+        // Убедимся, что контейнеры существуют
+        if (!conclusionTypeSelect || !nextVisitContainer || !deathDateContainer) return;
+
+        // Скрываем оба контейнера по умолчанию
+        nextVisitContainer.classList.add('d-none');
+        deathDateContainer.classList.add('d-none');
+
+        // Показываем нужное поле в зависимости от значения
+        if (conclusionTypeSelect.value === 'Disease') {
+            nextVisitContainer.classList.remove('d-none');
+        } else if (conclusionTypeSelect.value === 'Death') {
+            deathDateContainer.classList.remove('d-none');
+        }
+    }
+    
+    const conclusionField = document.getElementById('conclusionType');
+    if (conclusionField) {
+        conclusionField.addEventListener('change', updateConclusionFields);
+        updateConclusionFields(); // Инициализируем видимость полей при загрузке
+    }
+
+    // Добавляем обработчик события, если элемент `conclusionTypeSelect` существует
+    if (conclusionTypeSelect) {
+        conclusionTypeSelect.addEventListener('change', updateConclusionFields);
+        updateConclusionFields();
     }
 
     function openEditModal(inspection) {
@@ -289,6 +532,33 @@ document.getElementById('addDiagnosisBtn').addEventListener('click', function(e)
     document.getElementsByName('diagnosisType')[0].checked = true;
 });
 
+    // Сопоставление типов диагноза на русском и английском языках
+    const diagnosisTypeMapping = {
+        "Основной": "Main",
+        "Сопутствующий": "Concomitant",
+        "Осложнение": "Complication"
+    };
+
+
+function renderDiagnoses(diagnoses) {
+    const diagnosesList = document.getElementById('diagnoses-list');
+    if (!diagnosesList) return;
+
+    diagnosesList.innerHTML = '';
+    diagnoses.forEach(diagnosis => {
+        const listItem = document.createElement('li');
+        listItem.className = 'p-3 mb-2 border rounded bg-white'; // Классы Bootstrap для обводки и отступов
+
+        listItem.innerHTML = `
+            <strong>${diagnosis.code} - ${diagnosis.name}</strong><br>
+            Тип: ${diagnosis.type}<br>
+            Описание: ${diagnosis.description || 'Нет описания'}
+        `;
+
+        diagnosesList.appendChild(listItem);
+    });
+}
+
 
 function editDiagnosis(diagnosis) {
     // Используем fetchDiagnoses для обновления icdDiagnosisId диагноза по совпадению названия
@@ -314,8 +584,6 @@ function editDiagnosis(diagnosis) {
         })
         .catch(error => console.error('Ошибка при обновлении id диагноза:', error));
 }
-
-
 
 
 function addDiagnosisToList(diagnosis) {
@@ -386,94 +654,9 @@ document.getElementById('diagnosisSearch').addEventListener('input', function() 
     }
 });
 
-
-document.getElementById('saveChangesBtn').addEventListener('click', () => {
-    const complaintsField = document.getElementById('edit-complaints');
-    const anamnesisField = document.getElementById('edit-anamnesis');
-    const treatmentField = document.getElementById('edit-treatment');
-    const conclusionField = document.getElementById('conclusionType');
-    const nextVisitDateField = document.getElementById('nextVisitDate');
-    const deathDateField = document.getElementById('deathDateInput');
-
-    // Установка значения заключения
-    const conclusionValue = conclusionField ? conclusionField.value : null;
-
-    // Установка значений для дат в зависимости от заключения
-    let nextVisitDate = nextVisitDateField ? nextVisitDateField.value || null : null;
-    let deathDate = deathDateField ? deathDateField.value || null : null;
-
-    if (conclusionValue === 'Death') {
-        nextVisitDate = null; // Если заключение "Смерть", удаляем дату следующего визита
-    } else if (conclusionValue === 'Disease') {
-        deathDate = null; // Если заключение "Болезнь", удаляем дату смерти
-    } else if (conclusionValue === 'Recovery') {
-        // Если заключение "Выздоровление", оба поля даты не должны быть отправлены
-        nextVisitDate = null;
-        deathDate = null;
-    }
-
-    const updatedData = {
-        complaints: complaintsField ? complaintsField.value : '',
-        anamnesis: anamnesisField ? anamnesisField.value : '',
-        treatment: treatmentField ? treatmentField.value : '',
-        conclusion: conclusionValue,
-        nextVisitDate: nextVisitDate,
-        deathDate: deathDate,
-        diagnoses: [] // Пустой массив для наполнения с актуальными icdDiagnosisId
-    };
-
-    console.log("Данные для отправки:", JSON.stringify(updatedData));
-
-    const fetchPromises = diagnosisList.map(diagnosis => {
-        return new Promise((resolve) => {
-            fetchDiagnoses(diagnosis.code, authToken, apiBaseUrl, null, null)
-                .then(records => {
-                    const matchedDiagnosis = records.find(record => record.code === diagnosis.code);
-                    if (matchedDiagnosis) {
-                        updatedData.diagnoses.push({
-                            icdDiagnosisId: matchedDiagnosis.id,
-                            description: diagnosis.description || '',
-                            type: diagnosis.type || "Main"
-                        });
-                    } else {
-                        console.warn(`Не найден диагноз для кода ${diagnosis.code} в МКБ-10`);
-                    }
-                    resolve();
-                })
-                .catch(error => {
-                    console.error('Ошибка при поиске icdDiagnosisId:', error);
-                    resolve();
-                });
-        });
-    });
-
-    Promise.all(fetchPromises).then(() => {
-        fetch(`${apiBaseUrl}/api/inspection/${inspectionId}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(updatedData)
-        })
-        .then(response => {
-            if (response.ok) {
-                alert('Изменения успешно сохранены.');
-                location.reload();
-            } else {
-                return response.json().then(errorData => {
-                    console.error("Ошибка при сохранении:", errorData.message || "Неизвестная ошибка");
-                    throw new Error('Ошибка при сохранении изменений.');
-                });
-            }
-        })
-        .catch(error => console.error('Ошибка при сохранении:', error));
-    });
-});
-
     document.getElementById('editInspectionBtn')?.addEventListener('click', () => {
         // Логика для открытия модального окна редактирования
     });
         // Вызов функции при загрузке страницы
-        updateConclusionFields();
+    updateConclusionFields();
 });
