@@ -139,7 +139,7 @@ function renderConsultations(consultations) {
 
         listItem.innerHTML = `
             <strong>Специальность консультанта: ${consultation.speciality.name}</strong><br>
-            Комментарий врача: ${consultation.rootComment.content}<br>
+            Комментарий врача-автора: ${consultation.rootComment.content}<br>
             <em>Количество ответов: ${consultation.commentsNumber}</em>
         `;
 
@@ -186,46 +186,62 @@ function groupCommentsByParent(comments) {
 
 
 
-    // Функция для рендеринга комментария и его дочерних комментариев
-    function renderComment(comment, container, commentsByParent) {
-        const commentElement = document.createElement('div');
-        commentElement.className = 'p-2 mb-1 border rounded bg-light';
+// Функция для рендеринга комментария и его дочерних комментариев
+function renderComment(comment, container, commentsByParent) {
+    const commentElement = document.createElement('div');
+    commentElement.className = 'p-2 mb-1 border rounded bg-light';
 
-        let lastEditedInfo = '';
-        if (comment.modifiedDate) {
-            const editedDate = new Date(comment.modifiedDate).toLocaleString();
-            lastEditedInfo = `<span class="text-muted" title="Последнее изменение: ${editedDate}"> (Изменено)</span>`;
-        }
+    const createDate = new Date(comment.createTime).toLocaleString();
+    let lastEditedInfo = '';
 
-        commentElement.innerHTML = `
-            <strong>${comment.author}</strong>: ${comment.content} ${lastEditedInfo}
-            <div class="d-flex justify-content-end mt-1">
-                ${comment.authorId === currentDoctorId ? 
-                    `<button class="btn btn-sm btn-secondary me-2 edit-comment-btn">Редактировать</button>` : ''}
-                <button class="btn btn-sm btn-primary reply-btn">Ответить</button>
-            </div>
-        `;
-
-        // Обработчик для кнопки "Редактировать"
-        commentElement.querySelector('.edit-comment-btn')?.addEventListener('click', () => {
-            showEditCommentForm(comment, commentElement);
-        });
-
-        // Обработчик для кнопки "Ответить"
-        commentElement.querySelector('.reply-btn').addEventListener('click', () => {
-            showReplyForm(consultation, commentElement, comment.id);
-        });
-
-        container.appendChild(commentElement);
-
-        // Если у комментария есть дочерние комментарии, отображаем их рекурсивно
-        if (commentsByParent[comment.id]) {
-            const repliesContainer = document.createElement('div');
-            repliesContainer.className = 'ms-3 mt-2';
-            commentsByParent[comment.id].forEach(reply => renderComment(reply, repliesContainer, commentsByParent));
-            container.appendChild(repliesContainer);
-        }
+    // Проверка, отличается ли время изменения от времени создания
+    if (comment.modifiedDate && comment.modifiedDate !== comment.createTime) {
+        const editedDate = new Date(comment.modifiedDate).toLocaleString();
+        lastEditedInfo = `<span class="text-muted" title="Последнее изменение: ${editedDate}">(Изменено в ${editedDate})</span>`;
     }
+
+    commentElement.innerHTML = `
+        <div class="row">
+            <div class="col-10">
+                <div>
+                    <strong>${comment.author}</strong> ${lastEditedInfo}
+                </div>
+                <p class="mb-1">${comment.content}</p>
+                <div class="text-muted small">${createDate}</div>
+            </div>
+            <div class="col-2 d-flex flex-column align-items-end">
+                <div class="mt-auto d-flex">
+                    ${comment.authorId === currentDoctorId ? 
+                        `<button class="btn btn-sm btn-secondary me-2 edit-comment-btn">Редактировать</button>` : ''}
+                    <button class="btn btn-sm btn-primary reply-btn">Ответить</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Обработчик для кнопки "Редактировать"
+    commentElement.querySelector('.edit-comment-btn')?.addEventListener('click', () => {
+        showEditCommentForm(comment, commentElement);
+    });
+
+    // Обработчик для кнопки "Ответить"
+    commentElement.querySelector('.reply-btn').addEventListener('click', () => {
+        showReplyForm(consultation, commentElement, comment.id);
+    });
+
+    container.appendChild(commentElement);
+
+    // Если у комментария есть дочерние комментарии, отображаем их рекурсивно
+    if (commentsByParent[comment.id]) {
+        const repliesContainer = document.createElement('div');
+        repliesContainer.className = 'ms-4 mt-2';
+        commentsByParent[comment.id].forEach(reply => renderComment(reply, repliesContainer, commentsByParent));
+        container.appendChild(repliesContainer);
+    }
+}
+
+
+
 
     function showEditCommentForm(comment, commentElement) {
         const editForm = document.createElement('div');
