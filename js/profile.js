@@ -2,12 +2,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const profileForm = document.getElementById('profileForm');
     const userDropdown = document.getElementById('userDropdown');
     const authToken = localStorage.getItem('authToken');
-    const storedUserName = localStorage.getItem('userName'); // Считываем имя из localStorage
-
-    // Обновляем кнопку в навбаре при загрузке, если имя уже есть в localStorage
-    if (storedUserName) {
-        updateUserDropdown(storedUserName);
-    }
     
     // Загружаем данные профиля при загрузке страницы
     if (authToken) {
@@ -76,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         })
         .then(data => {
-            alert('Профиль успешно обновлён.');
+            //alert('Профиль успешно обновлён.');
             // Обновляем имя пользователя в localStorage и в кнопке
             const updatedName = document.getElementById('fullName').value;
             localStorage.setItem('userName', updatedName);
