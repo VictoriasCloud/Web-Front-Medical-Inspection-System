@@ -7,10 +7,14 @@
       "routes": {
         "/": "index.html",
         "/profile": "profile.html",
-        "/patient": "patient.html",
-        "/registration": "/registration.html",        
-        "/createCard": "/createCard.html",
-        "/login": "/login.html"
+        "/patients": "patient.html",
+        "/patient": "card.html",
+        "/registration": "registration.html",        
+        "/inspection/create": "createCard.html",
+        "/login": "login.html",
+        "/consultations": "consultations.html", 
+        "/inspection": "detailsInspection.html",
+        "/reports": "reports.html"
       },
       "fallback": "index.html"
     }

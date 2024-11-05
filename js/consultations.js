@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const patientId = urlParams.get('id');
     let inspectionsData = []; // Хранение данных осмотров
     let filterGrouped = urlParams.get('grouped') !== 'false';  // По умолчанию выбрано "Сгруппировать по повторным"
-
     
     if (!authToken) {
         alert('Авторизация требуется для доступа к этой странице.');
@@ -27,9 +26,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updateURL(params) {
-        params.id = patientId; // Добавляем ID пациента к параметрам
         const urlParams = new URLSearchParams(params);
-        window.history.pushState(null, '', `/patients?${urlParams.toString()}`); // Меняем путь на "/patients"
+        window.history.pushState(null, '', `/consultations?${urlParams.toString()}`); // Меняем путь на "/consultation?"
         setFilterOptions();
     }
 
@@ -52,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Обновляем URL с новыми параметрами
         updateURL(params);
-        loadInspections(); // Перезагружаем осмотры
+        loadInspections(); // и перезагружаем осмотры
     }
 
     document.getElementById('pageSize').addEventListener('change', updateFiltersAndReload);
@@ -62,7 +60,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function loadInspections(page = 1) {
-        // Показ временного индикатора загрузки
         synchronizePageSize();
         const inspectionsList = document.getElementById('inspectionsList');
         //inspectionsList.innerHTML = '<p>Загрузка...</p>';
@@ -82,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         updateURL(Object.fromEntries(params.entries()));  // Обновляем URL
 
-        fetch(`${apiBaseUrl}/api/patient/${patientId}/inspections?${params.toString()}`, {
+        fetch(`${apiBaseUrl}/api/consultation?${params.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`,
                 'Accept': 'application/json'
@@ -164,27 +161,27 @@ document.addEventListener('DOMContentLoaded', function () {
             // Добавляем кнопку "Детали осмотра" в контейнер кнопок
             buttonContainer.appendChild(detailsButton);
         
-            // Если у осмотра нет дочерних осмотров (hasNested = false), добавляем кнопку "Добавить осмотр"
-            if (!inspection.hasNested) {
-                const addButton = document.createElement('button');
-                addButton.className = 'btn btn-outline-primary linked-inspection-button';
-                addButton.textContent = 'Добавить осмотр';
-                addButton.setAttribute('data-linked', 'true'); // Устанавливаем атрибут для привязанных осмотров
+            // // Если у осмотра нет дочерних осмотров (hasNested = false), добавляем кнопку "Добавить осмотр"
+            // if (!inspection.hasNested) {
+            //     const addButton = document.createElement('button');
+            //     addButton.className = 'btn btn-outline-primary linked-inspection-button';
+            //     //addButton.textContent = 'Добавить осмотр';
+            //     addButton.setAttribute('data-linked', 'true'); // Устанавливаем атрибут для привязанных осмотров
 
-                // Обработчик для кнопки "Добавить осмотр"
-                addButton.addEventListener('click', function () {
-                    // Логика добавления нового осмотра (открываем новую вкладку)
-                    window.open(`createCard.html?previousInspectionId=${inspection.id}&id=${patientId}`, '_blank');
-                });
+            //     // Обработчик для кнопки "Добавить осмотр"
+            //     addButton.addEventListener('click', function () {
+            //         // Логика добавления нового осмотра (открываем новую вкладку)
+            //         window.open(`createCard.html?previousInspectionId=${inspection.id}&id=${patientId}`, '_blank');
+            //     });
         
-                // Добавляем кнопку "Добавить осмотр" справа от кнопки "Детали осмотра"
-                buttonContainer.appendChild(addButton);
-            }
+            //     // Добавляем кнопку "Добавить осмотр" справа от кнопки "Детали осмотра"
+            //     buttonContainer.appendChild(addButton);
+            // }
     
             // Добавляем кнопку для раскрытия дочерних осмотров только для корневых элементов (level === 0)
             // И только если фильтрация установлена на 'Сгруппировать по повторным'
             if (level === 0 && filterGrouped && (inspection.hasChain || inspection.hasNested)) {
-                const chainButton = document.createElement('button');
+                const chainButton = document.createElement('button'); 
                 chainButton.className = 'btn btn-link'; // Кнопка с текстом
                 chainButton.textContent = inspection.isExpanded ? '- Скрыть повторные осмотры' : '+ Показать повторные осмотры';
                 chainButton.addEventListener('click', () => {
@@ -246,12 +243,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 
-// Редирект на страницу создания осмотра (createCard.html) при нажатии на кнопку "Добавить осмотр" без привязки
-document.getElementById('addInspectionBtn').addEventListener('click', function() {
-    const patientId = new URLSearchParams(window.location.search).get('id');
-    window.location.href = `createCard.html?id=${patientId}&previousInspectionId=null`;
-});
-
     // Скрытие дочерних осмотров
     function hideChildInspections(inspection, chainButton, columnContainer) {
         // Находим все дочерние элементы с атрибутом data-parent-id равным id родителя
@@ -296,8 +287,6 @@ document.getElementById('addInspectionBtn').addEventListener('click', function()
         // Далее используем selectedIcd10Ids для выполнения фильтрации осмотров
         loadInspections();// Передаем выбранные диагнозы в функцию загрузки осмотров
     });
-    loadPatientInfo(patientId, apiBaseUrl, authToken);
-
     setFilterOptions();  
     setupFilters(); 
     loadInspections(getQueryParam('page', 1));
