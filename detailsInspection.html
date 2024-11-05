@@ -31,7 +31,7 @@
                     <button class="btn btn-primary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">Вход</button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                         <li><a class="dropdown-item" href="/profile.html">Профиль</a></li>
-                        <li><a class="dropdown-item" id="logout">Выход</a></li>
+                        <li><a class="dropdown-item" href="/login" id="logout">Выход</a></li>
                     </ul>
                 </div>
             </div>
@@ -40,14 +40,25 @@
 </header>
 
 <div class="container mt-5" id="inspection-details">
-    <!-- Основная информация пациента -->
     <div class="card mb-3 p-3 bg-light">
         <h1>Амбулаторный осмотр от <span id="inspection-date"></span></h1>
-        <span id="patientName">Пациент: <span id="patient-name"></span></span>
-        <p>Пол пациента: <span id="patient-gender"></span></p>
-        <p>Дата рождения пациента: <span id="patient-birthday"></span></p>
-        <p>Медицинский работник: <span id="doctor-name"></span></p>
-    </div>
+        
+        <div id="patientName" class="mb-2 fw-bold">
+            Пациент: <span id="patient-name"></span>
+        </div>
+        
+        <div class="mb-2">
+            Пол пациента: <span id="patient-gender"></span>
+        </div>
+        <div class="mb-2">
+            Дата рождения пациента: <span id="patient-birthday"></span>
+        </div>
+        
+        <div class="mb-2 text-muted">
+            Медицинский работник: <span id="doctor-name"></span>
+        </div>
+    </div>      
+
 
     <!-- Жалобы -->
     <div class="card mb-3 p-3 bg-light">
