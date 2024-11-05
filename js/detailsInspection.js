@@ -55,50 +55,64 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Основная функция отображения данных осмотра
-    function displayInspectionData(inspection) {
-        const inspectionDateEl = document.getElementById('inspection-date');
-        const patientNameEl = document.getElementById('patient-name');
-        const patientGenderEl = document.getElementById('patient-gender');
-        const patientBirthdayEl = document.getElementById('patient-birthday');
-        const doctorNameEl = document.getElementById('doctor-name');
-        const complaintsTextEl = document.getElementById('complaints-text');
-        const anamnesisTextEl = document.getElementById('anamnesis-text');
-        const treatmentTextEl = document.getElementById('treatment-text');
-        const conclusionTextEl = document.getElementById('conclusion-text');
-        const nextVisitDateEl = document.getElementById('next-visit-date');
-        const deathDateEl = document.getElementById('death-date');
+const conclusionMapping = {
+    "Disease": "Болезнь",
+    "Death": "Смерть",
+    "Recovery": "Выздоровление"
+};
 
-        patientGenderEl.textContent = inspection.patient.gender;
-        patientBirthdayEl.textContent = new Date(inspection.patient.birthday).toLocaleDateString();
-        
+// Основная функция отображения данных осмотра
+function displayInspectionData(inspection) {
+    const inspectionDateEl = document.getElementById('inspection-date');
+    const patientNameEl = document.getElementById('patient-name');
+    const patientGenderEl = document.getElementById('patient-gender');
+    const patientBirthdayEl = document.getElementById('patient-birthday');
+    const doctorNameEl = document.getElementById('doctor-name');
+    const complaintsTextEl = document.getElementById('complaints-text');
+    const anamnesisTextEl = document.getElementById('anamnesis-text');
+    const treatmentTextEl = document.getElementById('treatment-text');
+    const conclusionTextEl = document.getElementById('conclusion-text');
+    const nextVisitDateEl = document.getElementById('next-visit-date');
+    const deathDateEl = document.getElementById('death-date');
 
-        // Заполняем элементы, если они присутствуют
-        if (inspectionDateEl) inspectionDateEl.textContent = new Date(inspection.date).toLocaleDateString();
-        if (patientNameEl) patientNameEl.textContent = inspection.patient.name;
-        if (doctorNameEl) doctorNameEl.textContent = inspection.doctor.name;
-        if (complaintsTextEl) complaintsTextEl.textContent = inspection.complaints;
-        if (anamnesisTextEl) anamnesisTextEl.textContent = inspection.anamnesis;
-        if (treatmentTextEl) treatmentTextEl.textContent = inspection.treatment;
-        if (conclusionTextEl) conclusionTextEl.textContent = inspection.conclusion;
+    // Определение пола пациента
+    patientGenderEl.textContent = inspection.patient.gender === 'Male' ? 'Мужской' :
+                                  inspection.patient.gender === 'Female' ? 'Женский' :
+                                  inspection.patient.gender; // Для других значений
 
-    // Отображение заключения и связанных с ним дат с временем
-    if (inspection.conclusion === 'Disease' && inspection.nextVisitDate && nextVisitDateEl) {
+    patientBirthdayEl.textContent = new Date(inspection.patient.birthday).toLocaleDateString();
+
+    // Заполнение элементов, если они присутствуют
+    if (inspectionDateEl) inspectionDateEl.textContent = new Date(inspection.date).toLocaleDateString();
+    if (patientNameEl) patientNameEl.textContent = inspection.patient.name;
+    if (doctorNameEl) doctorNameEl.textContent = inspection.doctor.name;
+    if (complaintsTextEl) complaintsTextEl.textContent = inspection.complaints;
+    if (anamnesisTextEl) anamnesisTextEl.textContent = inspection.anamnesis;
+    if (treatmentTextEl) treatmentTextEl.textContent = inspection.treatment;
+
+    // Отображение заключения на русском
+    if (conclusionTextEl) {
+        conclusionTextEl.textContent = conclusionMapping[inspection.conclusion] || inspection.conclusion;
+    }
+
+    // Отображение дат в зависимости от заключения
+    const showNextVisit = inspection.conclusion === 'Disease' && inspection.nextVisitDate;
+    const showDeathDate = inspection.conclusion === 'Death' && inspection.deathDate;
+
+    nextVisitDateEl.style.display = showNextVisit ? 'block' : 'none';
+    deathDateEl.style.display = showDeathDate ? 'block' : 'none';
+
+    if (showNextVisit) {
         nextVisitDateEl.textContent = `Дата следующего визита: ${new Date(inspection.nextVisitDate).toLocaleString()}`;
-        nextVisitDateEl.style.display = 'block';
-        if (deathDateEl) deathDateEl.style.display = 'none';
-    } else if (inspection.conclusion === 'Death' && inspection.deathDate && deathDateEl) {
+    }
+    if (showDeathDate) {
         deathDateEl.textContent = `Дата и время смерти: ${new Date(inspection.deathDate).toLocaleString()}`;
-        deathDateEl.style.display = 'block';
-        if (nextVisitDateEl) nextVisitDateEl.style.display = 'none';
-    } else {
-        if (nextVisitDateEl) nextVisitDateEl.style.display = 'none';
-        if (deathDateEl) deathDateEl.style.display = 'none';
     }
 
-        renderDiagnoses(inspection.diagnoses);
-        renderConsultations(inspection.consultations);
-    }
+    // Отображение диагнозов и консультаций
+    renderDiagnoses(inspection.diagnoses);
+    renderConsultations(inspection.consultations);
+}
 
 
 
@@ -369,14 +383,6 @@ function renderComment(comment, container, commentsByParent, consultation) {
 
 
 
-
-
-
-
-
-
-
-
     document.getElementById('saveChangesBtn').addEventListener('click', () => {
         const complaintsField = document.getElementById('edit-complaints');
         const anamnesisField = document.getElementById('edit-anamnesis');
@@ -584,13 +590,12 @@ document.getElementById('addDiagnosisBtn').addEventListener('click', function(e)
     document.getElementsByName('diagnosisType')[0].checked = true;
 });
 
-    // Сопоставление типов диагноза на русском и английском языках
-    const diagnosisTypeMapping = {
-        "Основной": "Main",
-        "Сопутствующий": "Concomitant",
-        "Осложнение": "Complication"
-    };
-
+// Сопоставление типов диагноза на русском и английском языках
+const diagnosisTypeMapping = {
+    "Main": "Основной",
+    "Concomitant": "Сопутствующий",
+    "Complication": "Осложнение"
+};
 
 function renderDiagnoses(diagnoses) {
     const diagnosesList = document.getElementById('diagnoses-list');
@@ -599,11 +604,14 @@ function renderDiagnoses(diagnoses) {
     diagnosesList.innerHTML = '';
     diagnoses.forEach(diagnosis => {
         const listItem = document.createElement('li');
-        listItem.className = 'p-3 mb-2 border rounded bg-white'; // Классы Bootstrap для обводки и отступов
+        listItem.className = 'p-3 mb-2 border rounded bg-white';
+
+        // Преобразование типа диагноза
+        const diagnosisType = diagnosisTypeMapping[diagnosis.type] || diagnosis.type;
 
         listItem.innerHTML = `
             <strong>${diagnosis.code} - ${diagnosis.name}</strong><br>
-            Тип: ${diagnosis.type}<br>
+            Тип: ${diagnosisType}<br>
             Описание: ${diagnosis.description || 'Нет описания'}
         `;
 

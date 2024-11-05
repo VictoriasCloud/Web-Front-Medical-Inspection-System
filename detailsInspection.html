@@ -43,7 +43,7 @@
     <div class="card mb-3 p-3 bg-light">
         <h1>Амбулаторный осмотр от <span id="inspection-date"></span></h1>
         
-        <div id="patientName" class="mb-2 fw-bold">
+        <div id="patientName" class="mb-2 fw-semibold">
             Пациент: <span id="patient-name"></span>
         </div>
         
@@ -90,13 +90,14 @@
         <ul id="diagnoses-list" class="list-unstyled"></ul>
     </div>
 
-    <!-- Заключение -->
-    <div class="card mb-3 p-3 bg-light">
-        <h4>Заключение</h4>
-        <p id="conclusion-text"></p>
-        <p id="next-visit-date" style="display: none;"></p>
-        <p id="death-date" style="display: none;"></p>
-    </div>
+<!-- Заключение -->
+<div class="card mb-3 p-3 bg-light">
+    <h4>Заключение</h4>
+    <p id="conclusion-text" class="fw-semibold" data-disease="Болезнь" data-death="Смерть" data-recovery="Выздоровление"></p>
+    <p id="next-visit-date" style="display: none;"></p>
+    <p id="death-date" style="display: none;"></p>
+</div>
+
 
     <button id="editInspectionBtn" class="btn btn-primary" style="display:none;">Редактировать осмотр</button>
 </div>
