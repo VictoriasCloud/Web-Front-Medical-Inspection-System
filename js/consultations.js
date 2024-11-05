@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Обновляем URL с новыми параметрами
         updateURL(params);
-        loadInspections(); // Перезагружаем осмотры
+        loadInspections(); // и перезагружаем осмотры
     }
 
     document.getElementById('pageSize').addEventListener('change', updateFiltersAndReload);
@@ -60,7 +60,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function loadInspections(page = 1) {
-        // Показ временного индикатора загрузки
         synchronizePageSize();
         const inspectionsList = document.getElementById('inspectionsList');
         //inspectionsList.innerHTML = '<p>Загрузка...</p>';

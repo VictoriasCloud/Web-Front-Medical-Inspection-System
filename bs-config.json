@@ -13,7 +13,8 @@
         "/inspection/create": "createCard.html",
         "/login": "login.html",
         "/consultations": "consultations.html", 
-        "/inspection": "detailsInspection.html"
+        "/inspection": "detailsInspection.html",
+        "/reports": "reports.html"
       },
       "fallback": "index.html"
     }
