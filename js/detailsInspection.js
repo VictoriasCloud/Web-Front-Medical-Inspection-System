@@ -113,7 +113,7 @@ function loadComments(consultationId, container) {
     .then(response => response.json())
     .then(data => {
         const commentsByParent = groupCommentsByParent(data.comments);
-        commentsByParent[null]?.forEach(comment => renderComment(comment, container, commentsByParent));
+        commentsByParent[null]?.forEach(comment => renderComment(comment, container, commentsByParent, data));
     })
     .catch(error => console.error('Ошибка при загрузке комментариев:', error));
 }
@@ -189,7 +189,7 @@ function groupCommentsByParent(comments) {
 
 
 // Отрисовка комментария и его дочерних комментариев
-function renderComment(comment, container, commentsByParent) {
+function renderComment(comment, container, commentsByParent, consultation) {
     const commentElement = document.createElement('div');
     commentElement.className = 'p-2 mb-1 border rounded bg-light';
 
@@ -226,7 +226,7 @@ function renderComment(comment, container, commentsByParent) {
         showEditCommentForm(comment, commentElement);
     });
 
-    // Обработчик для кнопки "Ответить"
+    // Обработчик для кнопки "Ответить" с передачей объекта consultation
     commentElement.querySelector('.reply-btn').addEventListener('click', () => {
         showReplyForm(consultation, commentElement, comment.id);
     });
@@ -237,7 +237,7 @@ function renderComment(comment, container, commentsByParent) {
     if (commentsByParent[comment.id]) {
         const repliesContainer = document.createElement('div');
         repliesContainer.className = 'ms-4 mt-2';
-        commentsByParent[comment.id].forEach(reply => renderComment(reply, repliesContainer, commentsByParent));
+        commentsByParent[comment.id].forEach(reply =>renderComment(reply, repliesContainer, commentsByParent, consultation));
         container.appendChild(repliesContainer);
     }
 }
@@ -339,8 +339,13 @@ function renderComment(comment, container, commentsByParent) {
         })
         .then(response => response.json())
         .then(newReply => {
-            renderComment(newReply, commentElement.parentElement); // Добавляем новый ответ в список
-            replyForm.remove();
+            replyForm.remove(); // Убираем форму ответа
+            // Находим контейнер комментариев и очищаем его
+            const commentsContainer = commentElement.closest('.comments');
+            commentsContainer.innerHTML = ''; 
+            
+            // Заново загружаем и отображаем все комментарии для этой консультации
+            loadComments(consultationId, commentsContainer);
         })
         .catch(error => console.error('Ошибка при отправке ответа:', error));
     }
