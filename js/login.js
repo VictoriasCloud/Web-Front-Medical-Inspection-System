@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (registerButton) {
         registerButton.addEventListener('click', function () {
-            window.location.href = '/registration.html'; // Перенаправляем на страницу регистрации
+            window.location.href = '/registration'; // Перенаправляем на страницу регистрации
         });
     }
     
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     alert('Авторизация прошла успешно! Токен сохранён.');
 
-                    window.location.href = '/profile.html';
+                    window.location.href = '/profile';
                 } else {
                     const errorData = await response.json();
                     alert('Ошибка авторизации: ' + errorData.message);

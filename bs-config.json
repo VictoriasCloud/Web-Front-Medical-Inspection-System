@@ -1,0 +1,18 @@
+{
+    "server": {
+      "baseDir": "./",
+      "middleware": {
+        "1": null  
+      },
+      "routes": {
+        "/": "index.html",
+        "/profile": "profile.html",
+        "/patient": "patient.html",
+        "/registration": "/registration.html",        
+        "/createCard": "/createCard.html",
+        "/login": "/login.html"
+      },
+      "fallback": "index.html"
+    }
+  }
+  
