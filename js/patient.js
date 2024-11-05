@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', function () {
-
     const urlParams = new URLSearchParams(window.location.search);
     const patientId = urlParams.get('id');
 
@@ -14,10 +13,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const pageSizeInput = document.getElementById('pageSize');
     const authToken = localStorage.getItem('authToken');
     const apiBaseUrl = 'https://mis-api.kreosoft.space';
+    if (!authToken) {
+        alert('Авторизация требуется для доступа к этой странице.');
+        window.location.href = 'login.html';
+        return;
+    }
 
     const registerBtn = document.getElementById('registerPatientBtn');
     
-    // Инициализация модального окна Bootstrap
+    // Инициализация модального окна с Bootstrap
     const modal = new bootstrap.Modal(document.getElementById('patientModal'));
 
     // Открытие модального окна при клике на кнопку "Регистрация нового пациента"
