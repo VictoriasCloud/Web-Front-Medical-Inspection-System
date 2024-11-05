@@ -1,12 +1,12 @@
-function fetchDiagnoses(query = '', authToken, apiBaseUrl, diagnosisResults = null, diagnosisSearch = null) {
-    return fetch(`${apiBaseUrl}/api/dictionary/icd10?request=${query}&page=1&size=20`, {
-        headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
+async function fetchDiagnoses(query = '', authToken, apiBaseUrl, diagnosisResults = null, diagnosisSearch = null) {
+    try {
+        const response = await fetch(`${apiBaseUrl}/api/dictionary/icd10?request=${query}&page=1&size=20`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Accept': 'application/json'
+            }
+        });
+        const data = await response.json();
         if (diagnosisResults && diagnosisSearch) {
             diagnosisResults.innerHTML = '';
             diagnosisResults.style.display = 'block';
@@ -19,7 +19,7 @@ function fetchDiagnoses(query = '', authToken, apiBaseUrl, diagnosisResults = nu
                 item.dataset.id = diagnosis.id;
                 item.dataset.name = diagnosis.name;
 
-                item.addEventListener('click', function(e) {
+                item.addEventListener('click', function (e) {
                     e.preventDefault();
                     diagnosisSearch.value = `${diagnosis.code} - ${diagnosis.name}`;
                     diagnosisSearch.dataset.diagnosisId = diagnosis.id;
@@ -29,9 +29,10 @@ function fetchDiagnoses(query = '', authToken, apiBaseUrl, diagnosisResults = nu
                 diagnosisResults.appendChild(item);
             });
         }
-        return data.records; // Возвращаем записи для использования в других функциях
-    })
-    .catch(error => console.error('Ошибка загрузки диагнозов ICD-10:', error));
+        return data.records;
+    } catch (error) {
+        return console.error('Ошибка загрузки диагнозов ICD-10:', error);
+    }
 }
 
 // Экспорт функции
